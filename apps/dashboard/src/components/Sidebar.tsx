@@ -9,11 +9,12 @@ interface Props {
 }
 
 const navItems = [
-  { icon: '▦', label: 'Visão geral', href: '' },
-  { icon: '⭐', label: 'Avaliações', href: '/avaliacoes' },
-  { icon: '👥', label: 'Clientes', href: '/clientes' },
-  { icon: '📲', label: 'Campanhas', href: '/campanhas' },
-  { icon: '⚙', label: 'Configurações', href: '/configuracoes' },
+  { icon: '▦', label: 'Visão geral',   href: '' },
+  { icon: '⭐', label: 'Avaliações',   href: '/avaliacoes' },
+  { icon: '🎫', label: 'Fidelidade',   href: '/wallet' },
+  { icon: '👥', label: 'Clientes',     href: '/clientes' },
+  { icon: '📲', label: 'Campanhas',    href: '/campanhas' },
+  { icon: '⚙',  label: 'Configurações', href: '/configuracoes' },
 ];
 
 export default function Sidebar({ restaurantId, restaurantName, googleConnected, activeSection = '' }: Props) {

@@ -34,11 +34,19 @@ export default async function CampanhasPage({ params }: Props) {
         <header style={{
           background: '#fff', borderBottom: '1px solid var(--border)',
           padding: '0 24px', height: 56,
-          display: 'flex', alignItems: 'center', gap: 12,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           position: 'sticky', top: 0, zIndex: 10,
         }}>
-          <h1 style={{ fontSize: 16, fontWeight: 700 }}>Campanhas</h1>
-          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{totalMsgs} mensagens enviadas</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <h1 style={{ fontSize: 16, fontWeight: 700 }}>Campanhas</h1>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{totalMsgs} msgs enviadas</span>
+          </div>
+          <button style={{
+            background: 'var(--brand)', color: '#fff', border: 'none',
+            fontSize: 13, fontWeight: 700, padding: '7px 16px', borderRadius: 8, cursor: 'pointer',
+          }}>
+            + Nova campanha
+          </button>
         </header>
 
         <main style={{ padding: 24 }}>

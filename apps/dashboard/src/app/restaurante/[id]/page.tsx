@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import MetricCard from '@/components/MetricCard';
 import ReviewsList from '@/components/ReviewsList';
 import CustomersList from '@/components/CustomersList';
@@ -42,24 +41,23 @@ export default async function RestauranteDashboard({ params }: Props) {
     ? Math.round((publishedReviews.length / reviews.length) * 100)
     : 0;
   const pendingReviews = reviews?.filter(r => r.status === 'pending').length || 0;
+  const googleConnected = !!restaurant.google_refresh_token;
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar restaurantId={params.id} restaurantName={restaurant.name} />
+      <Sidebar
+        restaurantId={params.id}
+        restaurantName={restaurant.name}
+        googleConnected={googleConnected}
+        activeSection=""
+      />
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        {/* Top bar */}
         <header style={{
-          background: '#fff',
-          borderBottom: '1px solid var(--border)',
-          padding: '0 24px',
-          height: 56,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
+          background: '#fff', borderBottom: '1px solid var(--border)',
+          padding: '0 24px', height: 56,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          position: 'sticky', top: 0, zIndex: 10,
         }}>
           <div>
             <span style={{ fontWeight: 700, fontSize: 16 }}>{restaurant.name}</span>
@@ -70,12 +68,8 @@ export default async function RestauranteDashboard({ params }: Props) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {pendingReviews > 0 && (
               <span style={{
-                background: 'var(--brand)',
-                color: '#fff',
-                fontSize: 12,
-                fontWeight: 700,
-                padding: '3px 10px',
-                borderRadius: 99,
+                background: 'var(--brand)', color: '#fff',
+                fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 99,
               }}>
                 {pendingReviews} pendente{pendingReviews > 1 ? 's' : ''}
               </span>
@@ -83,66 +77,32 @@ export default async function RestauranteDashboard({ params }: Props) {
             <span style={{
               background: restaurant.active ? 'var(--green-light)' : '#f3f4f6',
               color: restaurant.active ? 'var(--green)' : 'var(--text-muted)',
-              fontSize: 12,
-              fontWeight: 600,
-              padding: '3px 10px',
-              borderRadius: 99,
+              fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
             }}>
               {restaurant.active ? '● ativo' : '○ inativo'}
             </span>
           </div>
         </header>
 
-        <main style={{ padding: '24px', flex: 1 }}>
-          {/* Métricas */}
+        <main style={{ padding: 24, flex: 1 }}>
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: 16,
-            marginBottom: 24,
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: 16, marginBottom: 24,
           }}>
-            <MetricCard
-              label="Nota no Google"
-              value={avgRating}
-              sub={`${reviews?.length || 0} avaliações`}
-              color="amber"
-              icon="⭐"
-            />
-            <MetricCard
-              label="Taxa de resposta"
-              value={`${responseRate}%`}
-              sub={`${publishedReviews.length} respondidas`}
-              color="blue"
-              icon="💬"
-            />
-            <MetricCard
-              label="Clientes no Wallet"
-              value={String(totalCustomers || 0)}
-              sub={`${visitsThisWeek || 0} visitas essa semana`}
-              color="green"
-              icon="👥"
-            />
-            <MetricCard
-              label="Msgs enviadas"
-              value={String(campaigns?.reduce((s, c) => s + (c.sent_to_count || 0), 0) || 0)}
-              sub={`${campaigns?.length || 0} campanhas`}
-              color="red"
-              icon="📲"
-            />
+            <MetricCard label="Nota no Google" value={avgRating} sub={`${reviews?.length || 0} avaliações`} color="amber" icon="⭐" />
+            <MetricCard label="Taxa de resposta" value={`${responseRate}%`} sub={`${publishedReviews.length} respondidas`} color="blue" icon="💬" />
+            <MetricCard label="Clientes no Wallet" value={String(totalCustomers || 0)} sub={`${visitsThisWeek || 0} visitas essa semana`} color="green" icon="👥" />
+            <MetricCard label="Msgs enviadas" value={String(campaigns?.reduce((s, c) => s + (c.sent_to_count || 0), 0) || 0)} sub={`${campaigns?.length || 0} campanhas`} color="red" icon="📲" />
           </div>
 
-          {/* Grid reviews + clientes */}
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-            gap: 20,
-            marginBottom: 20,
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+            gap: 20, marginBottom: 20,
           }}>
             <ReviewsList reviews={reviews || []} />
             <CustomersList customers={customers || []} stampsRequired={restaurant.stamps_required} />
           </div>
 
-          {/* Campanhas */}
           <CampaignsList campaigns={campaigns || []} />
         </main>
       </div>

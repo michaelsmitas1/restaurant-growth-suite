@@ -12,25 +12,8 @@ function getOAuthClient() {
   );
 }
 
-// GET /auth/google/:restaurantId — inicia fluxo OAuth
-authRouter.get('/google/:restaurantId', (req, res) => {
-  const { restaurantId } = req.params;
-  const oauth2Client = getOAuthClient();
-
-  const url = oauth2Client.generateAuthUrl({
-    access_type: 'offline',
-    prompt: 'consent', // força retorno do refresh_token
-    scope: [
-      'https://www.googleapis.com/auth/business.manage',
-      'https://www.googleapis.com/auth/userinfo.email',
-    ],
-    state: restaurantId, // passa restaurantId pelo state
-  });
-
-  res.redirect(url);
-});
-
 // GET /auth/google/callback — Google redireciona aqui após autorização
+// DEVE vir antes de /google/:restaurantId para não ser capturado pelo parâmetro
 authRouter.get('/google/callback', async (req, res) => {
   const { code, state: restaurantId, error } = req.query;
 
@@ -63,6 +46,24 @@ authRouter.get('/google/callback', async (req, res) => {
     console.error('Erro no callback OAuth:', err);
     res.redirect(`/auth/error?msg=${encodeURIComponent(err.message)}`);
   }
+});
+
+// GET /auth/google/:restaurantId — inicia fluxo OAuth
+authRouter.get('/google/:restaurantId', (req, res) => {
+  const { restaurantId } = req.params;
+  const oauth2Client = getOAuthClient();
+
+  const url = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: [
+      'https://www.googleapis.com/auth/business.manage',
+      'https://www.googleapis.com/auth/userinfo.email',
+    ],
+    state: restaurantId,
+  });
+
+  res.redirect(url);
 });
 
 // GET /auth/success — página de sucesso

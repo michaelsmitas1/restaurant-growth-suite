@@ -1,0 +1,168 @@
+{
+  "name": "01 — Reviews: Receber, Analisar e Enviar para Aprovação",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "google-review-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-review",
+      "name": "Webhook — Nova Review Google",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "google-review-webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": true }",
+        "options": {}
+      },
+      "id": "node-respond",
+      "name": "Responder 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [460, 180]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": "public",
+        "table": "restaurants",
+        "where": {
+          "values": [
+            { "column": "google_place_id", "value": "={{ $json.placeId }}" }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "node-get-restaurant",
+      "name": "Buscar Restaurante",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [460, 300],
+      "credentials": { "postgres": { "id": "supabase-db", "name": "Supabase DB" } }
+    },
+    {
+      "parameters": {
+        "model": "claude-opus-4-5",
+        "options": { "maxTokens": 500 },
+        "messages": {
+          "values": [
+            {
+              "role": "user",
+              "content": "={{ `Você é o assistente de reputação do restaurante ${$node['Buscar Restaurante'].json.name}.\n\nPerfil do restaurante:\n- Nome: ${$node['Buscar Restaurante'].json.name}\n- Tipo: ${$node['Buscar Restaurante'].json.type}\n- Tom de voz: ${$node['Buscar Restaurante'].json.tone_of_voice}\n\nNova avaliação recebida no Google:\n- Autor: ${$json.author}\n- Nota: ${$json.rating}/5 estrelas\n- Texto: \"${$json.text || '(sem texto)'}\"\n\nSua tarefa:\n1. Classifique o sentimento: 'positive' (4-5 ⭐), 'neutral' (3 ⭐), 'negative' (1-2 ⭐)\n2. Escreva uma resposta em português BR no tom do restaurante\n3. Seja específico ao que o cliente escreveu — nunca genérico\n4. Para reviews negativas: reconheça o problema, peça desculpas, ofereça solução\n5. Para reviews positivas: agradeça com genuinidade, convide para voltar\n6. Máximo 3 frases. Não use emojis.\n\nResponda APENAS em JSON válido:\n{\"sentiment\": \"positive|neutral|negative\", \"response\": \"texto da resposta aqui\"}` }}"
+            }
+          ]
+        }
+      },
+      "id": "node-claude-analyze",
+      "name": "Claude — Analisar e Gerar Resposta",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [680, 300],
+      "credentials": { "anthropicApi": { "id": "anthropic-key", "name": "Anthropic API" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.text || $input.first().json.content || '';\nlet parsed;\ntry {\n  const match = raw.match(/\\{[\\s\\S]*\\}/);\n  parsed = JSON.parse(match ? match[0] : raw);\n} catch(e) {\n  parsed = { sentiment: 'neutral', response: raw };\n}\nreturn [{ json: { sentiment: parsed.sentiment, aiResponse: parsed.response } }];"
+      },
+      "id": "node-parse-claude",
+      "name": "Parsear Resposta Claude",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "reviews",
+        "columns": "restaurant_id,google_review_id,author,rating,text,sentiment,ai_response,status",
+        "values": "={{ $node['Buscar Restaurante'].json.id }},={{ $node['Webhook — Nova Review Google'].json.reviewId }},={{ $node['Webhook — Nova Review Google'].json.author }},={{ $node['Webhook — Nova Review Google'].json.rating }},={{ $node['Webhook — Nova Review Google'].json.text }},={{ $node['Parsear Resposta Claude'].json.sentiment }},={{ $node['Parsear Resposta Claude'].json.aiResponse }},pending",
+        "returnFields": "id,restaurant_id"
+      },
+      "id": "node-save-review",
+      "name": "Salvar Review no Supabase",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1120, 300],
+      "credentials": { "postgres": { "id": "supabase-db", "name": "Supabase DB" } }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "review_approvals",
+        "columns": "review_id,restaurant_id,status,expires_at",
+        "values": "={{ $node['Salvar Review no Supabase'].json.id }},={{ $node['Buscar Restaurante'].json.id }},waiting,={{ new Date(Date.now() + 4*60*60*1000).toISOString() }}"
+      },
+      "id": "node-save-approval",
+      "name": "Criar Aprovação Pendente",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1340, 300],
+      "credentials": { "postgres": { "id": "supabase-db", "name": "Supabase DB" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVOLUTION_API_URL }}/message/sendText/saas-copiloto",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "apikey", "value": "={{ $env.EVOLUTION_API_KEY }}" }]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $node['Buscar Restaurante'].json.saas_whatsapp_number }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ `🔔 *Nova avaliação — ${$node['Buscar Restaurante'].json.name}*\\n\\n${'⭐'.repeat($node['Webhook — Nova Review Google'].json.rating)}${'☆'.repeat(5 - $node['Webhook — Nova Review Google'].json.rating)} *${$node['Webhook — Nova Review Google'].json.author}*\\n_\"${$node['Webhook — Nova Review Google'].json.text || '(sem comentário)'}\"_\\n\\n💬 *Resposta sugerida:*\\n${$node['Parsear Resposta Claude'].json.aiResponse}\\n\\n---\\nResponda com:\\n*1* — Publicar agora\\n*2* — Editar (envie o novo texto)\\n*3* — Ignorar\\n\\n⏱️ Sem resposta em 4h: publico automaticamente` }}"
+            },
+            { "name": "delay", "value": 1000 }
+          ]
+        }
+      },
+      "id": "node-whatsapp-approval",
+      "name": "WhatsApp SaaS — Pedir Aprovação",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 300]
+    }
+  ],
+  "connections": {
+    "Webhook — Nova Review Google": {
+      "main": [
+        [
+          { "node": "Responder 200", "type": "main", "index": 0 },
+          { "node": "Buscar Restaurante", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Buscar Restaurante": {
+      "main": [[{ "node": "Claude — Analisar e Gerar Resposta", "type": "main", "index": 0 }]]
+    },
+    "Claude — Analisar e Gerar Resposta": {
+      "main": [[{ "node": "Parsear Resposta Claude", "type": "main", "index": 0 }]]
+    },
+    "Parsear Resposta Claude": {
+      "main": [[{ "node": "Salvar Review no Supabase", "type": "main", "index": 0 }]]
+    },
+    "Salvar Review no Supabase": {
+      "main": [[{ "node": "Criar Aprovação Pendente", "type": "main", "index": 0 }]]
+    },
+    "Criar Aprovação Pendente": {
+      "main": [[{ "node": "WhatsApp SaaS — Pedir Aprovação", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "reviews" }]
+}

@@ -1,0 +1,209 @@
+{
+  "name": "02 — Reviews: Processar Aprovação do Dono via WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "evolution-webhook",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "node-webhook-evolution",
+      "name": "Webhook — Evolution API (mensagens recebidas)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "evolution-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrai payload da Evolution API v2\nconst body = $input.first().json;\nconst msgData = body.data;\n\n// Ignora mensagens enviadas pelo próprio sistema\nif (msgData?.key?.fromMe) return [];\n\nconst message = (\n  msgData?.message?.conversation ||\n  msgData?.message?.extendedTextMessage?.text ||\n  msgData?.message?.buttonsResponseMessage?.selectedDisplayText ||\n  ''\n).trim();\n\nconst fromNumber = (msgData?.key?.remoteJid || '')\n  .replace('@s.whatsapp.net', '')\n  .replace(/[^0-9]/g, '');\n\n// Apenas processa se for mensagem de texto\nif (!message || !fromNumber) return [];\n\nreturn [{ json: { message, fromNumber, raw: body } }];"
+      },
+      "id": "node-extract-msg",
+      "name": "Extrair Mensagem e Número",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": "public",
+        "table": "review_approvals",
+        "where": {
+          "values": [
+            { "column": "status", "value": "waiting" }
+          ]
+        },
+        "additionalFields": {
+          "orderBy": "created_at",
+          "orderDirection": "DESC",
+          "limit": 1
+        }
+      },
+      "id": "node-get-approval",
+      "name": "Buscar Aprovação Pendente",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [680, 300],
+      "credentials": { "postgres": { "id": "supabase-db", "name": "Supabase DB" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $node['Extrair Mensagem e Número'].json.message;\nconst approval = $node['Buscar Aprovação Pendente'].json;\n\nif (!approval || !approval.id) {\n  return [{ json: { action: 'no_pending', msg } }];\n}\n\nlet action;\nif (msg === '1') action = 'approve';\nelse if (msg === '3') action = 'ignore';\nelse if (msg.length > 5 && msg !== '2') action = 'edit'; // texto = edição\nelse action = 'unknown';\n\nreturn [{ json: {\n  action,\n  editedText: action === 'edit' ? msg : null,\n  approvalId: approval.id,\n  reviewId: approval.review_id,\n  restaurantId: approval.restaurant_id\n} }];"
+      },
+      "id": "node-interpret",
+      "name": "Interpretar Resposta do Dono",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "version": 2 },
+                "combinator": "and",
+                "conditions": [{ "operator": { "type": "string", "operation": "equals" }, "leftValue": "={{ $json.action }}", "rightValue": "approve" }]
+              },
+              "renameOutput": true,
+              "outputKey": "approve"
+            },
+            {
+              "conditions": {
+                "options": { "version": 2 },
+                "combinator": "and",
+                "conditions": [{ "operator": { "type": "string", "operation": "equals" }, "leftValue": "={{ $json.action }}", "rightValue": "edit" }]
+              },
+              "renameOutput": true,
+              "outputKey": "edit"
+            },
+            {
+              "conditions": {
+                "options": { "version": 2 },
+                "combinator": "and",
+                "conditions": [{ "operator": { "type": "string", "operation": "equals" }, "leftValue": "={{ $json.action }}", "rightValue": "ignore" }]
+              },
+              "renameOutput": true,
+              "outputKey": "ignore"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-switch",
+      "name": "Switch — Ação do Dono",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": "public",
+        "table": "reviews",
+        "where": { "values": [{ "column": "id", "value": "={{ $json.reviewId }}" }] }
+      },
+      "id": "node-get-review-approve",
+      "name": "Buscar Review (aprovar)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1340, 180],
+      "credentials": { "postgres": { "id": "supabase-db", "name": "Supabase DB" } }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://mybusiness.googleapis.com/v4/{{ $node['Buscar Review (aprovar)'].json.google_review_id }}/reply",
+        "authentication": "oAuth2",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [{ "name": "comment", "value": "={{ $node['Buscar Review (aprovar)'].json.ai_response }}" }]
+        }
+      },
+      "id": "node-publish-google-approve",
+      "name": "Publicar no Google (aprovar)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 180]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": "public",
+        "table": "reviews",
+        "updateKey": "id",
+        "columns": "status,final_response,responded_at",
+        "values": "published,={{ $node['Buscar Review (aprovar)'].json.ai_response }},={{ new Date().toISOString() }}"
+      },
+      "id": "node-update-review-approve",
+      "name": "Atualizar Review (publicada)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1780, 180],
+      "credentials": { "postgres": { "id": "supabase-db", "name": "Supabase DB" } }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": "public",
+        "table": "reviews",
+        "updateKey": "id",
+        "columns": "status,final_response,responded_at",
+        "values": "published,={{ $json.editedText }},={{ new Date().toISOString() }}"
+      },
+      "id": "node-update-review-edit",
+      "name": "Atualizar Review (editada)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1340, 420],
+      "credentials": { "postgres": { "id": "supabase-db", "name": "Supabase DB" } }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": "public",
+        "table": "reviews",
+        "updateKey": "id",
+        "columns": "status",
+        "values": "ignored"
+      },
+      "id": "node-update-review-ignore",
+      "name": "Atualizar Review (ignorada)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1340, 600],
+      "credentials": { "postgres": { "id": "supabase-db", "name": "Supabase DB" } }
+    }
+  ],
+  "connections": {
+    "Webhook — Evolution API (mensagens recebidas)": {
+      "main": [[{ "node": "Extrair Mensagem e Número", "type": "main", "index": 0 }]]
+    },
+    "Extrair Mensagem e Número": {
+      "main": [[{ "node": "Buscar Aprovação Pendente", "type": "main", "index": 0 }]]
+    },
+    "Buscar Aprovação Pendente": {
+      "main": [[{ "node": "Interpretar Resposta do Dono", "type": "main", "index": 0 }]]
+    },
+    "Interpretar Resposta do Dono": {
+      "main": [[{ "node": "Switch — Ação do Dono", "type": "main", "index": 0 }]]
+    },
+    "Switch — Ação do Dono": {
+      "approve": [[{ "node": "Buscar Review (aprovar)", "type": "main", "index": 0 }]],
+      "edit": [[{ "node": "Atualizar Review (editada)", "type": "main", "index": 0 }]],
+      "ignore": [[{ "node": "Atualizar Review (ignorada)", "type": "main", "index": 0 }]]
+    },
+    "Buscar Review (aprovar)": {
+      "main": [[{ "node": "Publicar no Google (aprovar)", "type": "main", "index": 0 }]]
+    },
+    "Publicar no Google (aprovar)": {
+      "main": [[{ "node": "Atualizar Review (publicada)", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "reviews" }]
+}

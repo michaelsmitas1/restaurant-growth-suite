@@ -1,0 +1,84 @@
+{
+  "name": "03 — Reviews: Auto-publicar Reviews Expiradas (sem resposta em 4h)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 * * * *" }]
+        }
+      },
+      "id": "node-cron-hourly",
+      "name": "Cron — A cada hora",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT ra.id as approval_id, ra.review_id, ra.restaurant_id, r.ai_response, r.google_review_id FROM review_approvals ra JOIN reviews r ON ra.review_id = r.id WHERE ra.status = 'waiting' AND ra.expires_at < NOW() AND r.status = 'pending'"
+      },
+      "id": "node-get-expired",
+      "name": "Buscar Aprovações Expiradas",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [460, 300],
+      "credentials": { "postgres": { "id": "supabase-db", "name": "Supabase DB" } }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "node-loop-expired",
+      "name": "Loop por Review Expirada",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://mybusiness.googleapis.com/v4/{{ $json.google_review_id }}/reply",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [{ "name": "comment", "value": "={{ $json.ai_response }}" }]
+        }
+      },
+      "id": "node-publish-google-auto",
+      "name": "Publicar no Google (auto)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE reviews SET status = 'published', final_response = ai_response, responded_at = NOW() WHERE id = '{{ $json.review_id }}';\nUPDATE review_approvals SET status = 'auto_published' WHERE id = '{{ $json.approval_id }}';"
+      },
+      "id": "node-update-auto",
+      "name": "Marcar como Auto-publicada",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1120, 300],
+      "credentials": { "postgres": { "id": "supabase-db", "name": "Supabase DB" } }
+    }
+  ],
+  "connections": {
+    "Cron — A cada hora": {
+      "main": [[{ "node": "Buscar Aprovações Expiradas", "type": "main", "index": 0 }]]
+    },
+    "Buscar Aprovações Expiradas": {
+      "main": [[{ "node": "Loop por Review Expirada", "type": "main", "index": 0 }]]
+    },
+    "Loop por Review Expirada": {
+      "main": [[{ "node": "Publicar no Google (auto)", "type": "main", "index": 0 }]]
+    },
+    "Publicar no Google (auto)": {
+      "main": [[{ "node": "Marcar como Auto-publicada", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "reviews" }]
+}

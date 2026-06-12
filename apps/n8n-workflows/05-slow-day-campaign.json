@@ -1,0 +1,100 @@
+{
+  "name": "05 — Campanhas: Slow Day (Terça-feira 10h30)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "30 10 * * 2" }]
+        }
+      },
+      "id": "node-cron-tuesday",
+      "name": "Cron — Terça às 10h30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT c.id, c.phone, c.name, c.total_visits, c.current_stamps, r.id as restaurant_id, r.name as restaurant_name, r.type as restaurant_type, r.tone_of_voice, r.reward_description, r.stamps_required, r.whatsapp_session_id FROM customers c JOIN restaurants r ON c.restaurant_id = r.id WHERE c.opted_out = false AND c.phone IS NOT NULL AND c.total_visits >= 2 AND r.active = true ORDER BY r.id, c.last_visit_at DESC"
+      },
+      "id": "node-get-active",
+      "name": "Buscar Todos Clientes Ativos",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [460, 300],
+      "credentials": { "postgres": { "id": "supabase-db", "name": "Supabase DB" } }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "node-loop-active",
+      "name": "Loop por Cliente",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "model": "claude-haiku-4-5",
+        "options": { "maxTokens": 150 },
+        "messages": {
+          "values": [
+            {
+              "role": "user",
+              "content": "={{ `Você escreve mensagens curtas de WhatsApp para restaurantes brasileiros.\n\nRestaurante: ${$json.restaurant_name} (${$json.restaurant_type})\nTom de voz: ${$json.tone_of_voice}\nCliente: ${$json.name || 'cliente'}\nHoje: terça-feira\nCarimbos do cliente: ${$json.current_stamps} de ${$json.stamps_required}\n\nCrie uma mensagem de terça-feira especial (slow day). Regras:\n- Máx 2 frases\n- Crie um motivo divertido ou especial para visitar HOJE, terça\n- Pode inventar: prato especial de terça, ambiente mais tranquilo, desconto criativo\n- Tom leve e animado\n- Se tiver carimbos próximos da recompensa, mencione (ex: \"faltam X carimbos\")\n- Máx 1 emoji\n\nResponda apenas com o texto da mensagem, sem aspas.` }}"
+            }
+          ]
+        }
+      },
+      "id": "node-claude-slowday",
+      "name": "Claude — Gerar Mensagem Slow Day",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [900, 300],
+      "credentials": { "anthropicApi": { "id": "anthropic-key", "name": "Anthropic API" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVOLUTION_API_URL }}/message/sendText/{{ $node['Loop por Cliente'].json.whatsapp_session_id || $node['Loop por Cliente'].json.restaurant_name.toLowerCase().replace(/ /g, '-') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "apikey", "value": "={{ $env.EVOLUTION_API_KEY }}" }]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "number", "value": "={{ $node['Loop por Cliente'].json.phone }}" },
+            { "name": "text", "value": "={{ $node['Claude — Gerar Mensagem Slow Day'].json.text || $node['Claude — Gerar Mensagem Slow Day'].json.content }}" },
+            { "name": "delay", "value": "={{ Math.floor(Math.random() * 10000) + 2000 }}" }
+          ]
+        }
+      },
+      "id": "node-send-slowday",
+      "name": "Evolution — Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Cron — Terça às 10h30": {
+      "main": [[{ "node": "Buscar Todos Clientes Ativos", "type": "main", "index": 0 }]]
+    },
+    "Buscar Todos Clientes Ativos": {
+      "main": [[{ "node": "Loop por Cliente", "type": "main", "index": 0 }]]
+    },
+    "Loop por Cliente": {
+      "main": [[{ "node": "Claude — Gerar Mensagem Slow Day", "type": "main", "index": 0 }]]
+    },
+    "Claude — Gerar Mensagem Slow Day": {
+      "main": [[{ "node": "Evolution — Enviar WhatsApp", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "campanhas" }]
+}

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, type CSSProperties } from 'react';
 import { approveReview, ignoreReview, saveResponse } from '@/app/actions/reviews';
 
 interface Review {
@@ -49,17 +49,17 @@ export default function AvaliacaoCard({ review, restaurantId }: { review: Review
   const response = review.final_response || review.ai_response;
 
   function handleApprove() {
-    startTransition(() => approveReview(review.id, restaurantId));
+    startTransition(() => { void approveReview(review.id, restaurantId); });
   }
 
   function handleIgnore() {
     if (!confirm('Ignorar esta avaliação?')) return;
-    startTransition(() => ignoreReview(review.id, restaurantId));
+    startTransition(() => { void ignoreReview(review.id, restaurantId); });
   }
 
   function handleSave() {
     if (!draft.trim()) return;
-    startTransition(() => saveResponse(review.id, restaurantId, draft));
+    startTransition(() => { void saveResponse(review.id, restaurantId, draft); });
     setEditing(false);
   }
 
@@ -169,5 +169,5 @@ function btnStyle(variant: 'green' | 'blue' | 'gray') {
     ...variants[variant],
     fontSize: 12, fontWeight: 700, padding: '6px 14px',
     borderRadius: 7, cursor: 'pointer', transition: 'opacity 0.15s',
-  } as React.CSSProperties;
+  } as CSSProperties;
 }

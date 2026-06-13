@@ -12,10 +12,7 @@ export default async function RestauranteDashboard({ params }: Props) {
   const supabase = createClient();
 
   const { data: restaurant } = await supabase
-    .from('restaurants')
-    .select('*')
-    .eq('id', params.id)
-    .single();
+    .from('restaurants').select('*').eq('id', params.id).single();
 
   if (!restaurant) notFound();
 
@@ -30,7 +27,8 @@ export default async function RestauranteDashboard({ params }: Props) {
     supabase.from('customers').select('*').eq('restaurant_id', params.id).order('last_visit_at', { ascending: false }).limit(25),
     supabase.from('campaigns').select('*').eq('restaurant_id', params.id).order('created_at', { ascending: false }).limit(6),
     supabase.from('customers').select('*', { count: 'exact', head: true }).eq('restaurant_id', params.id),
-    supabase.from('visits').select('*', { count: 'exact', head: true }).eq('restaurant_id', params.id).gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+    supabase.from('visits').select('*', { count: 'exact', head: true }).eq('restaurant_id', params.id)
+      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
   ]);
 
   const publishedReviews = reviews?.filter(r => r.status === 'published') || [];
@@ -42,6 +40,7 @@ export default async function RestauranteDashboard({ params }: Props) {
     : 0;
   const pendingReviews = reviews?.filter(r => r.status === 'pending').length || 0;
   const googleConnected = !!restaurant.google_refresh_token;
+  const totalMsgs = campaigns?.reduce((s, c) => s + (c.sent_to_count || 0), 0) || 0;
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
@@ -52,60 +51,79 @@ export default async function RestauranteDashboard({ params }: Props) {
         activeSection=""
       />
 
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <header style={{
-          background: '#fff', borderBottom: '1px solid var(--border)',
-          padding: '0 24px', height: 56,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          position: 'sticky', top: 0, zIndex: 10,
-        }}>
+      <main style={{ flex: 1, minWidth: 0, padding: '32px 36px' }}>
+        {/* Page header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
           <div>
-            <span style={{ fontWeight: 700, fontSize: 16 }}>{restaurant.name}</span>
-            <span style={{ color: 'var(--text-muted)', fontSize: 13, marginLeft: 8 }}>
-              {restaurant.type} · {restaurant.neighborhood}
-            </span>
+            <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', marginBottom: 3 }}>
+              Visão geral
+            </h1>
+            <p style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
+              {restaurant.name} · {restaurant.type} · {restaurant.neighborhood}
+            </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {pendingReviews > 0 && (
               <span style={{
                 background: 'var(--brand)', color: '#fff',
-                fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 99,
+                fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 99,
               }}>
                 {pendingReviews} pendente{pendingReviews > 1 ? 's' : ''}
               </span>
             )}
             <span style={{
-              background: restaurant.active ? 'var(--green-light)' : '#f3f4f6',
-              color: restaurant.active ? 'var(--green)' : 'var(--text-muted)',
-              fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 99,
+              background: restaurant.active ? '#f0fdf4' : '#f9fafb',
+              color: restaurant.active ? '#16a34a' : 'var(--text-muted)',
+              fontSize: 12, fontWeight: 600, padding: '5px 12px', borderRadius: 99,
+              border: `1px solid ${restaurant.active ? '#bbf7d0' : '#e5e7eb'}`,
             }}>
               {restaurant.active ? '● ativo' : '○ inativo'}
             </span>
           </div>
-        </header>
+        </div>
 
-        <main style={{ padding: 24, flex: 1 }}>
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: 16, marginBottom: 24,
-          }}>
-            <MetricCard label="Nota no Google" value={avgRating} sub={`${reviews?.length || 0} avaliações`} color="amber" icon="⭐" />
-            <MetricCard label="Taxa de resposta" value={`${responseRate}%`} sub={`${publishedReviews.length} respondidas`} color="blue" icon="💬" />
-            <MetricCard label="Clientes no Wallet" value={String(totalCustomers || 0)} sub={`${visitsThisWeek || 0} visitas essa semana`} color="green" icon="👥" />
-            <MetricCard label="Msgs enviadas" value={String(campaigns?.reduce((s, c) => s + (c.sent_to_count || 0), 0) || 0)} sub={`${campaigns?.length || 0} campanhas`} color="red" icon="📲" />
-          </div>
+        {/* Metric cards */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: 14,
+          marginBottom: 28,
+        }}>
+          <MetricCard
+            label="Nota no Google"
+            value={avgRating}
+            sub={`${reviews?.length || 0} avaliações`}
+          />
+          <MetricCard
+            label="Taxa de resposta"
+            value={`${responseRate}%`}
+            sub={`${publishedReviews.length} respondidas`}
+          />
+          <MetricCard
+            label="Clientes no Wallet"
+            value={String(totalCustomers || 0)}
+            sub={`${visitsThisWeek || 0} visitas essa semana`}
+          />
+          <MetricCard
+            label="Msgs enviadas"
+            value={String(totalMsgs)}
+            sub={`${campaigns?.length || 0} campanhas`}
+          />
+        </div>
 
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-            gap: 20, marginBottom: 20,
-          }}>
-            <ReviewsList reviews={reviews || []} />
-            <CustomersList customers={customers || []} stampsRequired={restaurant.stamps_required} />
-          </div>
+        {/* Content grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+          gap: 20,
+          marginBottom: 20,
+        }}>
+          <ReviewsList reviews={reviews || []} />
+          <CustomersList customers={customers || []} stampsRequired={restaurant.stamps_required} />
+        </div>
 
-          <CampaignsList campaigns={campaigns || []} />
-        </main>
-      </div>
+        <CampaignsList campaigns={campaigns || []} />
+      </main>
     </div>
   );
 }

@@ -1,13 +1,6 @@
 import Link from 'next/link';
 import {
-  LayoutDashboard,
-  Star,
-  Ticket,
-  Users,
-  Send,
-  Settings,
-  ChevronLeft,
-  Circle,
+  LayoutDashboard, Star, Ticket, Users, Send, Settings, ChevronLeft, Circle,
 } from 'lucide-react';
 
 interface Props {
@@ -17,23 +10,37 @@ interface Props {
   activeSection?: string;
 }
 
-const navItems = [
-  { icon: LayoutDashboard, label: 'Visão geral',    href: '' },
-  { icon: Star,            label: 'Avaliações',     href: '/avaliacoes' },
-  { icon: Ticket,          label: 'Fidelidade',     href: '/wallet' },
-  { icon: Users,           label: 'Clientes',       href: '/clientes' },
-  { icon: Send,            label: 'Campanhas',      href: '/campanhas' },
-  { icon: Settings,        label: 'Configurações',  href: '/configuracoes' },
+const menuItems = [
+  { icon: LayoutDashboard, label: 'Visão geral',   href: '' },
+  { icon: Star,            label: 'Avaliações',    href: '/avaliacoes' },
+  { icon: Ticket,          label: 'Fidelidade',    href: '/wallet' },
+  { icon: Users,           label: 'Clientes',      href: '/clientes' },
+  { icon: Send,            label: 'Campanhas',     href: '/campanhas' },
+];
+
+const geralItems = [
+  { icon: Settings, label: 'Configurações', href: '/configuracoes' },
 ];
 
 export default function Sidebar({ restaurantId, restaurantName, googleConnected, activeSection = '' }: Props) {
   const base = `/restaurante/${restaurantId}`;
   const initial = restaurantName.charAt(0).toUpperCase();
 
+  function NavItem({ icon: Icon, label, href }: { icon: typeof Settings; label: string; href: string }) {
+    const isActive = activeSection === href;
+    return (
+      <Link href={`${base}${href}`} className={`nav-link${isActive ? ' active' : ''}`}>
+        <Icon size={15} strokeWidth={isActive ? 2.2 : 1.8} />
+        <span>{label}</span>
+      </Link>
+    );
+  }
+
   return (
     <aside style={{
-      width: 220,
+      width: 232,
       background: 'var(--sidebar-bg)',
+      borderRight: '1px solid var(--sidebar-border)',
       display: 'flex',
       flexDirection: 'column',
       flexShrink: 0,
@@ -42,40 +49,42 @@ export default function Sidebar({ restaurantId, restaurantName, googleConnected,
       height: '100vh',
       overflowY: 'auto',
     }}>
+
       {/* Logo */}
-      <div style={{ padding: '18px 14px 16px', borderBottom: '1px solid #1e1e1e' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
+      <div style={{ padding: '20px 16px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{
-            width: 26, height: 26, background: 'var(--brand)', borderRadius: 6,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            width: 28, height: 28,
+            background: 'var(--brand)',
+            borderRadius: 7,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 14, flexShrink: 0,
           }}>
-            <span style={{ fontSize: 13 }}>🍽</span>
+            🍽
           </div>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: 13.5, letterSpacing: '-0.01em' }}>
+          <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
             Growth Suite
           </span>
         </div>
+      </div>
 
-        {/* Restaurant chip */}
+      {/* Restaurant chip */}
+      <div style={{ padding: '0 10px 14px' }}>
         <div style={{
-          background: '#1a1a1a',
-          borderRadius: 8,
-          padding: '8px 10px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          border: '1px solid #252525',
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '7px 10px', borderRadius: 9,
+          background: '#f7f7f8', border: '1px solid #ebebeb',
         }}>
           <div style={{
-            width: 26, height: 26, borderRadius: 6,
+            width: 24, height: 24, borderRadius: 6,
             background: 'var(--brand)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 12, fontWeight: 800, color: '#fff', flexShrink: 0,
+            fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0,
           }}>
             {initial}
           </div>
           <span style={{
-            color: '#d1d5db', fontSize: 12, fontWeight: 600,
+            fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {restaurantName}
@@ -83,42 +92,30 @@ export default function Sidebar({ restaurantId, restaurantName, googleConnected,
         </div>
       </div>
 
-      {/* Nav */}
-      <nav style={{ padding: '10px 8px', flex: 1 }}>
-        {navItems.map(({ icon: Icon, label, href }) => {
-          const isActive = activeSection === href;
-          return (
-            <Link
-              key={href}
-              href={`${base}${href}`}
-              className={`nav-link${isActive ? ' active' : ''}`}
-            >
-              <Icon size={15} strokeWidth={isActive ? 2.2 : 1.8} />
-              <span>{label}</span>
-            </Link>
-          );
-        })}
+      {/* Nav sections */}
+      <nav style={{ padding: '0 8px', flex: 1 }}>
+        <div className="section-label">Menu</div>
+        {menuItems.map(item => <NavItem key={item.href} {...item} />)}
+
+        <div className="section-label" style={{ marginTop: 8 }}>Geral</div>
+        {geralItems.map(item => <NavItem key={item.href} {...item} />)}
       </nav>
 
       {/* Google status */}
-      <div style={{ padding: '12px 14px', borderTop: '1px solid #1e1e1e' }}>
+      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--sidebar-border)' }}>
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          fontSize: 11, fontWeight: 600,
-          color: googleConnected ? '#4ade80' : '#6b7280',
-          marginBottom: googleConnected ? 0 : 6,
+          display: 'flex', alignItems: 'center', gap: 5,
+          fontSize: 11.5, fontWeight: 500,
+          color: googleConnected ? '#16a34a' : 'var(--text-muted)',
+          marginBottom: googleConnected ? 0 : 4,
         }}>
-          <Circle
-            size={5}
-            fill={googleConnected ? '#4ade80' : '#6b7280'}
-            stroke="none"
-          />
+          <Circle size={5} fill={googleConnected ? '#16a34a' : '#9ca3af'} stroke="none" />
           Google {googleConnected ? 'conectado' : 'desconectado'}
         </div>
         {!googleConnected && (
           <a
             href={`https://restaurant-growth-suite-production.up.railway.app/auth/google/${restaurantId}`}
-            style={{ fontSize: 11, color: 'var(--brand)', textDecoration: 'none', fontWeight: 600 }}
+            style={{ fontSize: 11.5, color: 'var(--brand)', textDecoration: 'none', fontWeight: 600 }}
           >
             Conectar →
           </a>
@@ -126,17 +123,16 @@ export default function Sidebar({ restaurantId, restaurantName, googleConnected,
       </div>
 
       {/* Footer */}
-      <div style={{ padding: '8px 8px 12px', borderTop: '1px solid #1e1e1e' }}>
+      <div style={{ padding: '8px 8px 12px', borderTop: '1px solid var(--sidebar-border)' }}>
         <Link
           href="/"
           style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            fontSize: 12, color: '#4b5563',
+            display: 'flex', alignItems: 'center', gap: 5,
+            fontSize: 12, color: 'var(--text-muted)',
             textDecoration: 'none', padding: '6px 10px', borderRadius: 7,
-            transition: 'color 0.12s',
           }}
         >
-          <ChevronLeft size={13} />
+          <ChevronLeft size={12} />
           Todos os restaurantes
         </Link>
       </div>

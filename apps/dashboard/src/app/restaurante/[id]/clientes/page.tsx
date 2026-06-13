@@ -14,8 +14,6 @@ function timeSince(iso: string | null) {
   return `${Math.floor(d / 30)}m atrás`;
 }
 
-const avatarColors = ['#fde68a', '#bbf7d0', '#bfdbfe', '#ddd6fe', '#fed7aa', '#fecaca'];
-
 export default async function ClientesPage({ params }: Props) {
   const supabase = createClient();
 
@@ -23,8 +21,7 @@ export default async function ClientesPage({ params }: Props) {
   if (!restaurant) notFound();
 
   const { data: customers, count } = await supabase
-    .from('customers')
-    .select('*', { count: 'exact' })
+    .from('customers').select('*', { count: 'exact' })
     .eq('restaurant_id', params.id)
     .order('last_visit_at', { ascending: false });
 
@@ -32,75 +29,85 @@ export default async function ClientesPage({ params }: Props) {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar restaurantId={params.id} restaurantName={restaurant.name} googleConnected={!!restaurant.google_refresh_token} activeSection="/clientes" />
+      <Sidebar
+        restaurantId={params.id}
+        restaurantName={restaurant.name}
+        googleConnected={!!restaurant.google_refresh_token}
+        activeSection="/clientes"
+      />
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <header style={{
-          background: '#fff', borderBottom: '1px solid var(--border)',
-          padding: '0 24px', height: 56,
-          display: 'flex', alignItems: 'center', gap: 12,
-          position: 'sticky', top: 0, zIndex: 10,
-        }}>
-          <h1 style={{ fontSize: 16, fontWeight: 700 }}>Clientes</h1>
-          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{count || 0} no wallet</span>
-        </header>
+      <main style={{ flex: 1, minWidth: 0, padding: '32px 36px' }}>
+        {/* Page header */}
+        <div style={{ marginBottom: 32 }}>
+          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', marginBottom: 3 }}>
+            Clientes
+          </h1>
+          <p style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
+            {count || 0} clientes no wallet
+          </p>
+        </div>
 
-        <main style={{ padding: 24 }}>
-          <div style={{ background: '#fff', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
-            {!customers || customers.length === 0 ? (
-              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
-                Nenhum cliente ainda
-              </div>
-            ) : customers.map((c, i) => {
-              const filled = Math.min(c.current_stamps || 0, stampsRequired);
-              const pct = Math.round((filled / stampsRequired) * 100);
-              const complete = filled >= stampsRequired;
-              return (
-                <div key={c.id} style={{
-                  padding: '12px 20px',
-                  borderTop: i > 0 ? '1px solid var(--border-light)' : 'none',
-                  display: 'flex', alignItems: 'center', gap: 14,
+        <div className="card" style={{ overflow: 'hidden' }}>
+          {!customers || customers.length === 0 ? (
+            <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
+              Nenhum cliente ainda
+            </div>
+          ) : customers.map((c, i) => {
+            const filled = Math.min(c.current_stamps || 0, stampsRequired);
+            const pct = Math.round((filled / stampsRequired) * 100);
+            const complete = filled >= stampsRequired;
+            const initials = c.name
+              ? c.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+              : (c.phone || '?').slice(-2);
+
+            return (
+              <div key={c.id} style={{
+                padding: '13px 22px',
+                borderTop: i > 0 ? '1px solid var(--border-light)' : 'none',
+                display: 'flex', alignItems: 'center', gap: 14,
+              }}>
+                {/* Avatar */}
+                <div style={{
+                  width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+                  background: complete ? 'var(--brand)' : '#f3f4f6',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: complete ? 16 : 12, fontWeight: 700,
+                  color: complete ? '#fff' : '#6b7280',
                 }}>
-                  <div style={{
-                    width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-                    background: complete ? 'var(--brand)' : avatarColors[i % avatarColors.length],
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 13, fontWeight: 700,
-                    color: complete ? '#fff' : '#1a1a1a',
-                  }}>
-                    {complete ? '🎁' : (c.name ? c.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase() : (c.phone || '?').slice(-2))}
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600 }}>{c.name || c.phone || 'Anônimo'}</span>
-                      <div style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{c.total_visits || 0} visitas</span>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{timeSince(c.last_visit_at)}</span>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ flex: 1, height: 5, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' }}>
-                        <div style={{
-                          width: `${pct}%`, height: '100%', borderRadius: 99,
-                          background: complete ? 'var(--brand)' : 'var(--green)',
-                        }} />
-                      </div>
-                      <span style={{ fontSize: 11, fontWeight: 700, flexShrink: 0, color: complete ? 'var(--brand)' : 'var(--text-secondary)' }}>
-                        {complete ? 'Recompensa!' : `${filled}/${stampsRequired}`}
-                      </span>
-                    </div>
-                  </div>
-
-                  {c.phone && (
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>{c.phone}</span>
-                  )}
+                  {complete ? '🎁' : initials}
                 </div>
-              );
-            })}
-          </div>
-        </main>
-      </div>
+
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 600 }}>{c.name || 'Anônimo'}</span>
+                      {c.phone && (
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.phone}</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: 14, flexShrink: 0 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.total_visits || 0} visitas</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{timeSince(c.last_visit_at)}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1, height: 4, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{
+                        width: `${pct}%`, height: '100%', borderRadius: 99,
+                        background: complete ? 'var(--brand)' : 'var(--green)',
+                      }} />
+                    </div>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, flexShrink: 0, color: complete ? 'var(--brand)' : 'var(--text-secondary)' }}>
+                      {complete ? 'Recompensa!' : `${filled}/${stampsRequired}`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </main>
     </div>
   );
 }

@@ -9,6 +9,10 @@ export default async function Home() {
     .select('id, name, type, neighborhood, city, active')
     .order('created_at', { ascending: false });
 
+  if (!restaurants || restaurants.length === 0) {
+    redirect('/restaurante/9a588819-e3fc-4817-a0f7-55a5974c4c5b');
+  }
+
   if (restaurants && restaurants.length === 1) {
     redirect(`/restaurante/${restaurants[0].id}`);
   }

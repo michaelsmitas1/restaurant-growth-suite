@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
+import MobileNav from '@/components/MobileNav';
 
 interface Props { params: { id: string } }
 
@@ -28,7 +29,7 @@ export default async function ClientesPage({ params }: Props) {
   const stampsRequired = restaurant.stamps_required || 10;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="app-layout">
       <Sidebar
         restaurantId={params.id}
         restaurantName={restaurant.name}
@@ -36,15 +37,16 @@ export default async function ClientesPage({ params }: Props) {
         activeSection="/clientes"
       />
 
-      <main style={{ flex: 1, minWidth: 0, padding: '32px 36px' }}>
-        {/* Page header */}
-        <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', marginBottom: 3 }}>
-            Clientes
-          </h1>
-          <p style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
-            {count || 0} clientes no wallet
-          </p>
+      <main className="page-main">
+        <div className="page-header-row">
+          <div>
+            <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', marginBottom: 3 }}>
+              Clientes
+            </h1>
+            <p style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
+              {count || 0} clientes no wallet
+            </p>
+          </div>
         </div>
 
         <div className="card" style={{ overflow: 'hidden' }}>
@@ -62,36 +64,36 @@ export default async function ClientesPage({ params }: Props) {
 
             return (
               <div key={c.id} style={{
-                padding: '13px 22px',
+                padding: '13px 20px',
                 borderTop: i > 0 ? '1px solid var(--border-light)' : 'none',
-                display: 'flex', alignItems: 'center', gap: 14,
+                display: 'flex', alignItems: 'center', gap: 12,
               }}>
-                {/* Avatar */}
                 <div style={{
-                  width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+                  width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
                   background: complete ? 'var(--brand)' : '#f3f4f6',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: complete ? 16 : 12, fontWeight: 700,
+                  fontSize: complete ? 15 : 12, fontWeight: 700,
                   color: complete ? '#fff' : '#6b7280',
                 }}>
                   {complete ? '🎁' : initials}
                 </div>
 
-                {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 13.5, fontWeight: 600 }}>{c.name || 'Anônimo'}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {c.name || 'Anônimo'}
+                      </span>
                       {c.phone && (
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.phone}</span>
+                        <span style={{ fontSize: 11.5, color: 'var(--text-muted)', flexShrink: 0 }}>{c.phone}</span>
                       )}
                     </div>
-                    <div style={{ display: 'flex', gap: 14, flexShrink: 0 }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.total_visits || 0} visitas</span>
-                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{timeSince(c.last_visit_at)}</span>
+                    <div style={{ display: 'flex', gap: 10, flexShrink: 0, marginLeft: 8 }}>
+                      <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{c.total_visits || 0}v</span>
+                      <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{timeSince(c.last_visit_at)}</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ flex: 1, height: 4, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' }}>
                       <div style={{
                         width: `${pct}%`, height: '100%', borderRadius: 99,
@@ -108,6 +110,8 @@ export default async function ClientesPage({ params }: Props) {
           })}
         </div>
       </main>
+
+      <MobileNav restaurantId={params.id} />
     </div>
   );
 }

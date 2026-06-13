@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
+import MobileNav from '@/components/MobileNav';
 import QRCode from 'qrcode';
 
 interface Props { params: { id: string } }
@@ -21,7 +22,6 @@ export default async function WalletPage({ params }: Props) {
 
   const { data: restaurant } = await supabase
     .from('restaurants').select('*').eq('id', params.id).single();
-
   if (!restaurant) notFound();
 
   const enrollUrl = `${SERVICE_URL}/wallet/${params.id}`;
@@ -52,7 +52,7 @@ export default async function WalletPage({ params }: Props) {
   const stampsRequired = restaurant.stamps_required || 10;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="app-layout">
       <Sidebar
         restaurantId={params.id}
         restaurantName={restaurant.name}
@@ -60,43 +60,43 @@ export default async function WalletPage({ params }: Props) {
         activeSection="/wallet"
       />
 
-      <main style={{ flex: 1, minWidth: 0, padding: '32px 36px' }}>
-        {/* Page header */}
-        <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', marginBottom: 3 }}>
-            Fidelidade
-          </h1>
-          <p style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
-            Programa de selos — {stampsRequired} selos para recompensa
-          </p>
+      <main className="page-main">
+        <div className="page-header-row">
+          <div>
+            <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', marginBottom: 3 }}>
+              Fidelidade
+            </h1>
+            <p style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
+              {stampsRequired} selos para recompensa
+            </p>
+          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 24, maxWidth: 900, alignItems: 'start' }}>
+        {/* QR + stats layout: stack on mobile */}
+        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
 
           {/* QR Code card */}
           <div className="card" style={{
-            padding: 28, display: 'flex', flexDirection: 'column',
-            alignItems: 'center', gap: 16, width: 260,
+            padding: 24, display: 'flex', flexDirection: 'column',
+            alignItems: 'center', gap: 14, minWidth: 220, flex: '0 0 auto',
           }}>
             <p style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'center', margin: 0 }}>
               QR para novos clientes
             </p>
             <div
               dangerouslySetInnerHTML={{ __html: qrSvg }}
-              style={{ width: 180, height: 180, borderRadius: 8, overflow: 'hidden' }}
+              style={{ width: 160, height: 160, borderRadius: 8, overflow: 'hidden' }}
             />
             <div style={{ textAlign: 'center' }}>
               <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10, lineHeight: 1.5 }}>
-                Imprima ou exiba no balcão.<br />
-                Cliente escaneia → adiciona ao Wallet.
+                Imprima ou exiba no balcão.<br />Cliente escaneia → adiciona ao Wallet.
               </p>
               <a
                 href={enrollUrl} target="_blank" rel="noopener noreferrer"
                 style={{
                   display: 'inline-block', fontSize: 12, fontWeight: 600,
                   color: 'var(--brand)', textDecoration: 'none',
-                  background: 'var(--brand-light)', padding: '7px 14px',
-                  borderRadius: 8,
+                  background: 'var(--brand-light)', padding: '7px 14px', borderRadius: 8,
                 }}
               >
                 Abrir página →
@@ -104,25 +104,25 @@ export default async function WalletPage({ params }: Props) {
             </div>
           </div>
 
-          {/* Right column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Right column — stretches to fill */}
+          <div style={{ flex: 1, minWidth: 200, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-            {/* Métricas */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            {/* Mini metrics */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
               {[
-                { label: 'Clientes no Wallet', value: String(totalCustomers || 0) },
-                { label: 'Carimbos hoje',       value: String(stampsToday || 0) },
-                { label: 'Próximos da recomp.', value: String(nearReward || 0) },
+                { label: 'No Wallet',    value: String(totalCustomers || 0) },
+                { label: 'Selos hoje',   value: String(stampsToday || 0) },
+                { label: 'Prox. recomp.',value: String(nearReward || 0) },
               ].map(m => (
-                <div key={m.label} className="metric-card" style={{ padding: '18px 20px' }}>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>{m.label}</div>
-                  <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em' }}>{m.value}</div>
+                <div key={m.label} className="metric-card" style={{ padding: '16px 16px' }}>
+                  <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 6 }}>{m.label}</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em' }}>{m.value}</div>
                 </div>
               ))}
             </div>
 
             {/* Programa */}
-            <div className="card" style={{ padding: '16px 20px' }}>
+            <div className="card" style={{ padding: '14px 18px' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
                 Programa de fidelidade
               </div>
@@ -132,7 +132,7 @@ export default async function WalletPage({ params }: Props) {
               ].map((row, i) => (
                 <div key={row.label} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '8px 0', borderTop: i > 0 ? '1px solid var(--border-light)' : 'none',
+                  padding: '8px 0', borderTop: i > 0 ? '1px solid var(--border-light)' : 'none', gap: 8,
                 }}>
                   <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{row.label}</span>
                   <span style={{ fontSize: 13, fontWeight: 600 }}>{row.value}</span>
@@ -143,7 +143,7 @@ export default async function WalletPage({ params }: Props) {
             {/* Clientes recentes */}
             {customers && customers.length > 0 && (
               <div className="card" style={{ overflow: 'hidden' }}>
-                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-light)' }}>
+                <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border-light)' }}>
                   <span style={{ fontSize: 13.5, fontWeight: 700 }}>Clientes recentes</span>
                 </div>
                 {customers.map((c, i) => {
@@ -152,15 +152,15 @@ export default async function WalletPage({ params }: Props) {
                   const complete = filled >= stampsRequired;
                   return (
                     <div key={c.id} style={{
-                      padding: '10px 20px',
+                      padding: '10px 18px',
                       borderTop: i > 0 ? '1px solid var(--border-light)' : 'none',
-                      display: 'flex', alignItems: 'center', gap: 12,
+                      display: 'flex', alignItems: 'center', gap: 10,
                     }}>
                       <div style={{
-                        width: 32, height: 32, borderRadius: '50%',
+                        width: 30, height: 30, borderRadius: '50%',
                         background: complete ? 'var(--brand)' : '#f3f4f6',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: complete ? 14 : 11, fontWeight: 700, flexShrink: 0,
+                        fontSize: complete ? 13 : 10, fontWeight: 700, flexShrink: 0,
                         color: complete ? '#fff' : '#6b7280',
                       }}>
                         {complete ? '🎁' : (c.name ? c.name[0].toUpperCase() : '?')}
@@ -168,9 +168,9 @@ export default async function WalletPage({ params }: Props) {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                           <span style={{ fontSize: 13, fontWeight: 600 }}>{c.name || c.phone || 'Anônimo'}</span>
-                          <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{timeSince(c.last_visit_at)}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{timeSince(c.last_visit_at)}</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                           <div style={{ flex: 1, height: 4, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' }}>
                             <div style={{ width: `${pct}%`, height: '100%', background: complete ? 'var(--brand)' : 'var(--green)', borderRadius: 99 }} />
                           </div>
@@ -187,6 +187,8 @@ export default async function WalletPage({ params }: Props) {
           </div>
         </div>
       </main>
+
+      <MobileNav restaurantId={params.id} />
     </div>
   );
 }

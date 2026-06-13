@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
+import MobileNav from '@/components/MobileNav';
 import AvaliacaoCard from '@/components/AvaliacaoCard';
 
 interface Props { params: { id: string } }
@@ -10,7 +11,6 @@ export default async function AvaliacoesPage({ params }: Props) {
 
   const { data: restaurant } = await supabase
     .from('restaurants').select('*').eq('id', params.id).single();
-
   if (!restaurant) notFound();
 
   const { data: reviews } = await supabase
@@ -22,11 +22,10 @@ export default async function AvaliacoesPage({ params }: Props) {
   const ignored   = reviews?.filter(r => r.status === 'ignored') || [];
 
   const avgRating = reviews && reviews.length > 0
-    ? (reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length).toFixed(1)
-    : null;
+    ? (reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length).toFixed(1) : null;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="app-layout">
       <Sidebar
         restaurantId={params.id}
         restaurantName={restaurant.name}
@@ -34,9 +33,8 @@ export default async function AvaliacoesPage({ params }: Props) {
         activeSection="/avaliacoes"
       />
 
-      <main style={{ flex: 1, minWidth: 0, padding: '32px 36px' }}>
-        {/* Page header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
+      <main className="page-main">
+        <div className="page-header-row">
           <div>
             <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', marginBottom: 3 }}>
               Avaliações
@@ -47,21 +45,21 @@ export default async function AvaliacoesPage({ params }: Props) {
             </p>
           </div>
           {pending.length > 0 && (
-            <span style={{
-              background: '#fffbeb', color: '#b45309',
-              fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 99,
-              border: '1px solid #fde68a',
-            }}>
-              {pending.length} pendente{pending.length > 1 ? 's' : ''}
-            </span>
+            <div className="page-header-badges">
+              <span style={{
+                background: '#fffbeb', color: '#b45309',
+                fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 99,
+                border: '1px solid #fde68a',
+              }}>
+                {pending.length} pendente{pending.length > 1 ? 's' : ''}
+              </span>
+            </div>
           )}
         </div>
 
         <div style={{ maxWidth: 800 }}>
           {!reviews || reviews.length === 0 ? (
-            <div className="card" style={{
-              padding: 48, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14,
-            }}>
+            <div className="card" style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>⭐</div>
               Nenhuma avaliação ainda.<br />
               <span style={{ fontSize: 13 }}>Conecte o Google Business para importar avaliações.</span>
@@ -102,6 +100,8 @@ export default async function AvaliacoesPage({ params }: Props) {
           )}
         </div>
       </main>
+
+      <MobileNav restaurantId={params.id} />
     </div>
   );
 }

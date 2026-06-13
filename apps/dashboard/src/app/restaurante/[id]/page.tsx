@@ -5,6 +5,7 @@ import ReviewsList from '@/components/ReviewsList';
 import CustomersList from '@/components/CustomersList';
 import CampaignsList from '@/components/CampaignsList';
 import Sidebar from '@/components/Sidebar';
+import MobileNav from '@/components/MobileNav';
 
 interface Props { params: { id: string } }
 
@@ -13,7 +14,6 @@ export default async function RestauranteDashboard({ params }: Props) {
 
   const { data: restaurant } = await supabase
     .from('restaurants').select('*').eq('id', params.id).single();
-
   if (!restaurant) notFound();
 
   const [
@@ -33,27 +33,23 @@ export default async function RestauranteDashboard({ params }: Props) {
 
   const publishedReviews = reviews?.filter(r => r.status === 'published') || [];
   const avgRating = reviews && reviews.length > 0
-    ? (reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length).toFixed(1)
-    : '—';
+    ? (reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length).toFixed(1) : '—';
   const responseRate = reviews && reviews.length > 0
-    ? Math.round((publishedReviews.length / reviews.length) * 100)
-    : 0;
+    ? Math.round((publishedReviews.length / reviews.length) * 100) : 0;
   const pendingReviews = reviews?.filter(r => r.status === 'pending').length || 0;
-  const googleConnected = !!restaurant.google_refresh_token;
   const totalMsgs = campaigns?.reduce((s, c) => s + (c.sent_to_count || 0), 0) || 0;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="app-layout">
       <Sidebar
         restaurantId={params.id}
         restaurantName={restaurant.name}
-        googleConnected={googleConnected}
+        googleConnected={!!restaurant.google_refresh_token}
         activeSection=""
       />
 
-      <main style={{ flex: 1, minWidth: 0, padding: '32px 36px' }}>
-        {/* Page header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
+      <main className="page-main">
+        <div className="page-header-row">
           <div>
             <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', marginBottom: 3 }}>
               Visão geral
@@ -62,7 +58,7 @@ export default async function RestauranteDashboard({ params }: Props) {
               {restaurant.name} · {restaurant.type} · {restaurant.neighborhood}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className="page-header-badges">
             {pendingReviews > 0 && (
               <span style={{
                 background: 'var(--brand)', color: '#fff',
@@ -82,48 +78,22 @@ export default async function RestauranteDashboard({ params }: Props) {
           </div>
         </div>
 
-        {/* Metric cards */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 14,
-          marginBottom: 28,
-        }}>
-          <MetricCard
-            label="Nota no Google"
-            value={avgRating}
-            sub={`${reviews?.length || 0} avaliações`}
-          />
-          <MetricCard
-            label="Taxa de resposta"
-            value={`${responseRate}%`}
-            sub={`${publishedReviews.length} respondidas`}
-          />
-          <MetricCard
-            label="Clientes no Wallet"
-            value={String(totalCustomers || 0)}
-            sub={`${visitsThisWeek || 0} visitas essa semana`}
-          />
-          <MetricCard
-            label="Msgs enviadas"
-            value={String(totalMsgs)}
-            sub={`${campaigns?.length || 0} campanhas`}
-          />
+        <div className="metrics-grid">
+          <MetricCard label="Nota no Google" value={avgRating} sub={`${reviews?.length || 0} avaliações`} />
+          <MetricCard label="Taxa de resposta" value={`${responseRate}%`} sub={`${publishedReviews.length} respondidas`} />
+          <MetricCard label="Clientes no Wallet" value={String(totalCustomers || 0)} sub={`${visitsThisWeek || 0} visitas essa semana`} />
+          <MetricCard label="Msgs enviadas" value={String(totalMsgs)} sub={`${campaigns?.length || 0} campanhas`} />
         </div>
 
-        {/* Content grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-          gap: 20,
-          marginBottom: 20,
-        }}>
+        <div className="content-grid">
           <ReviewsList reviews={reviews || []} />
           <CustomersList customers={customers || []} stampsRequired={restaurant.stamps_required} />
         </div>
 
         <CampaignsList campaigns={campaigns || []} />
       </main>
+
+      <MobileNav restaurantId={params.id} />
     </div>
   );
 }

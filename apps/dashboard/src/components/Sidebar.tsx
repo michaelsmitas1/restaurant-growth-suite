@@ -11,11 +11,11 @@ interface Props {
 }
 
 const menuItems = [
-  { icon: LayoutDashboard, label: 'Visão geral',   href: '' },
-  { icon: Star,            label: 'Avaliações',    href: '/avaliacoes' },
-  { icon: Ticket,          label: 'Fidelidade',    href: '/wallet' },
-  { icon: Users,           label: 'Clientes',      href: '/clientes' },
-  { icon: Send,            label: 'Campanhas',     href: '/campanhas' },
+  { icon: LayoutDashboard, label: 'Visão geral',  href: '' },
+  { icon: Star,            label: 'Avaliações',   href: '/avaliacoes' },
+  { icon: Ticket,          label: 'Fidelidade',   href: '/wallet' },
+  { icon: Users,           label: 'Clientes',     href: '/clientes' },
+  { icon: Send,            label: 'Campanhas',    href: '/campanhas' },
 ];
 
 const geralItems = [
@@ -37,105 +37,110 @@ export default function Sidebar({ restaurantId, restaurantName, googleConnected,
   }
 
   return (
-    <aside style={{
-      width: 232,
-      background: 'var(--sidebar-bg)',
-      borderRight: '1px solid var(--sidebar-border)',
-      display: 'flex',
-      flexDirection: 'column',
-      flexShrink: 0,
-      position: 'sticky',
-      top: 0,
-      height: '100vh',
-      overflowY: 'auto',
-    }}>
+    <>
+      {/* ─── Desktop sidebar ─── */}
+      <aside className="app-sidebar" style={{
+        background: 'var(--sidebar-bg)',
+        borderRight: '1px solid var(--sidebar-border)',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'sticky',
+        top: 0,
+        height: '100vh',
+        overflowY: 'auto',
+      }}>
+        {/* Logo */}
+        <div style={{ padding: '20px 16px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 28, height: 28, background: 'var(--brand)', borderRadius: 7,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0,
+            }}>🍽</div>
+            <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-0.01em' }}>Growth Suite</span>
+          </div>
+        </div>
 
-      {/* Logo */}
-      <div style={{ padding: '20px 16px 16px' }}>
+        {/* Restaurant chip */}
+        <div style={{ padding: '0 10px 14px' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '7px 10px', borderRadius: 9,
+            background: '#f7f7f8', border: '1px solid #ebebeb',
+          }}>
+            <div style={{
+              width: 24, height: 24, borderRadius: 6, background: 'var(--brand)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0,
+            }}>{initial}</div>
+            <span style={{
+              fontSize: 12.5, fontWeight: 600,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{restaurantName}</span>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ padding: '0 8px', flex: 1 }}>
+          <div className="section-label">Menu</div>
+          {menuItems.map(item => <NavItem key={item.href} {...item} />)}
+          <div className="section-label" style={{ marginTop: 8 }}>Geral</div>
+          {geralItems.map(item => <NavItem key={item.href} {...item} />)}
+        </nav>
+
+        {/* Google status */}
+        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--sidebar-border)' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            fontSize: 11.5, fontWeight: 500,
+            color: googleConnected ? '#16a34a' : 'var(--text-muted)',
+            marginBottom: googleConnected ? 0 : 4,
+          }}>
+            <Circle size={5} fill={googleConnected ? '#16a34a' : '#9ca3af'} stroke="none" />
+            Google {googleConnected ? 'conectado' : 'desconectado'}
+          </div>
+          {!googleConnected && (
+            <a
+              href={`https://restaurant-growth-suite-production.up.railway.app/auth/google/${restaurantId}`}
+              style={{ fontSize: 11.5, color: 'var(--brand)', textDecoration: 'none', fontWeight: 600 }}
+            >
+              Conectar →
+            </a>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '8px 8px 12px', borderTop: '1px solid var(--sidebar-border)' }}>
+          <Link href="/" style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            fontSize: 12, color: 'var(--text-muted)',
+            textDecoration: 'none', padding: '6px 10px', borderRadius: 7,
+          }}>
+            <ChevronLeft size={12} />
+            Todos os restaurantes
+          </Link>
+        </div>
+      </aside>
+
+      {/* ─── Mobile top bar ─── */}
+      <div className="mobile-top-bar">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{
-            width: 28, height: 28,
-            background: 'var(--brand)',
-            borderRadius: 7,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 14, flexShrink: 0,
-          }}>
-            🍽
-          </div>
-          <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
-            Growth Suite
-          </span>
+            width: 26, height: 26, background: 'var(--brand)', borderRadius: 6,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0,
+          }}>🍽</div>
+          <span style={{ fontWeight: 700, fontSize: 13.5 }}>Growth Suite</span>
         </div>
-      </div>
-
-      {/* Restaurant chip */}
-      <div style={{ padding: '0 10px 14px' }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '7px 10px', borderRadius: 9,
-          background: '#f7f7f8', border: '1px solid #ebebeb',
-        }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <div style={{
-            width: 24, height: 24, borderRadius: 6,
-            background: 'var(--brand)',
+            width: 22, height: 22, borderRadius: 5, background: 'var(--brand)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0,
-          }}>
-            {initial}
-          </div>
-          <span style={{
-            fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
+            fontSize: 10, fontWeight: 800, color: '#fff',
+          }}>{initial}</div>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-secondary)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {restaurantName}
           </span>
         </div>
       </div>
-
-      {/* Nav sections */}
-      <nav style={{ padding: '0 8px', flex: 1 }}>
-        <div className="section-label">Menu</div>
-        {menuItems.map(item => <NavItem key={item.href} {...item} />)}
-
-        <div className="section-label" style={{ marginTop: 8 }}>Geral</div>
-        {geralItems.map(item => <NavItem key={item.href} {...item} />)}
-      </nav>
-
-      {/* Google status */}
-      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--sidebar-border)' }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-          fontSize: 11.5, fontWeight: 500,
-          color: googleConnected ? '#16a34a' : 'var(--text-muted)',
-          marginBottom: googleConnected ? 0 : 4,
-        }}>
-          <Circle size={5} fill={googleConnected ? '#16a34a' : '#9ca3af'} stroke="none" />
-          Google {googleConnected ? 'conectado' : 'desconectado'}
-        </div>
-        {!googleConnected && (
-          <a
-            href={`https://restaurant-growth-suite-production.up.railway.app/auth/google/${restaurantId}`}
-            style={{ fontSize: 11.5, color: 'var(--brand)', textDecoration: 'none', fontWeight: 600 }}
-          >
-            Conectar →
-          </a>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div style={{ padding: '8px 8px 12px', borderTop: '1px solid var(--sidebar-border)' }}>
-        <Link
-          href="/"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            fontSize: 12, color: 'var(--text-muted)',
-            textDecoration: 'none', padding: '6px 10px', borderRadius: 7,
-          }}
-        >
-          <ChevronLeft size={12} />
-          Todos os restaurantes
-        </Link>
-      </div>
-    </aside>
+    </>
   );
 }

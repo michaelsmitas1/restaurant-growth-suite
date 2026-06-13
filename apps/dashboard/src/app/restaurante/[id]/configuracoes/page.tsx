@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
+import MobileNav from '@/components/MobileNav';
 
 interface Props { params: { id: string } }
 
@@ -12,23 +13,10 @@ export default async function ConfiguracoesPage({ params }: Props) {
 
   const googleConnected = !!restaurant.google_refresh_token;
   const tokenExpiry = restaurant.google_token_expires_at
-    ? new Date(restaurant.google_token_expires_at).toLocaleDateString('pt-BR')
-    : null;
-
-  function Row({ label, value }: { label: string; value: string }) {
-    return (
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '12px 20px', borderTop: '1px solid var(--border-light)',
-      }}>
-        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{label}</span>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>{value}</span>
-      </div>
-    );
-  }
+    ? new Date(restaurant.google_token_expires_at).toLocaleDateString('pt-BR') : null;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="app-layout">
       <Sidebar
         restaurantId={params.id}
         restaurantName={restaurant.name}
@@ -36,18 +24,19 @@ export default async function ConfiguracoesPage({ params }: Props) {
         activeSection="/configuracoes"
       />
 
-      <main style={{ flex: 1, minWidth: 0, padding: '32px 36px' }}>
-        {/* Page header */}
-        <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', marginBottom: 3 }}>
-            Configurações
-          </h1>
-          <p style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
-            Dados do restaurante e integrações
-          </p>
+      <main className="page-main">
+        <div className="page-header-row">
+          <div>
+            <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', marginBottom: 3 }}>
+              Configurações
+            </h1>
+            <p style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
+              Dados do restaurante e integrações
+            </p>
+          </div>
         </div>
 
-        <div style={{ maxWidth: 600, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ maxWidth: 580, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {/* Restaurante */}
           <section>
@@ -55,15 +44,24 @@ export default async function ConfiguracoesPage({ params }: Props) {
               Restaurante
             </h2>
             <div className="card" style={{ overflow: 'hidden' }}>
-              <div style={{ padding: '12px 20px' }}>
-                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Nome</span>
-                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>{restaurant.name}</div>
-              </div>
-              <Row label="Tipo" value={restaurant.type} />
-              <Row label="Bairro" value={restaurant.neighborhood} />
-              <Row label="Cidade" value={restaurant.city} />
-              <Row label="Selos para recompensa" value={String(restaurant.stamps_required || 10)} />
-              <Row label="Tom de voz IA" value={restaurant.tone_of_voice || 'Não definido'} />
+              {[
+                { label: 'Nome',                  value: restaurant.name },
+                { label: 'Tipo',                  value: restaurant.type },
+                { label: 'Bairro',                value: restaurant.neighborhood },
+                { label: 'Cidade',                value: restaurant.city },
+                { label: 'Selos para recompensa', value: String(restaurant.stamps_required || 10) },
+                { label: 'Tom de voz IA',          value: restaurant.tone_of_voice || 'Não definido' },
+              ].map((row, i) => (
+                <div key={row.label} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '12px 20px',
+                  borderTop: i > 0 ? '1px solid var(--border-light)' : 'none',
+                  gap: 12,
+                }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-muted)', flexShrink: 0 }}>{row.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, textAlign: 'right' }}>{row.value}</span>
+                </div>
+              ))}
             </div>
           </section>
 
@@ -73,19 +71,19 @@ export default async function ConfiguracoesPage({ params }: Props) {
               Google Business
             </h2>
             <div className="card" style={{ padding: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{
-                    width: 7, height: 7, borderRadius: '50%', display: 'inline-block',
-                    background: googleConnected ? '#22c55e' : '#9ca3af',
-                  }} />
-                  <span style={{ fontSize: 14, fontWeight: 600 }}>
-                    {googleConnected ? 'Conectado' : 'Não conectado'}
-                  </span>
-                  {googleConnected && tokenExpiry && (
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                      · expira em {tokenExpiry}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
+                    <span style={{
+                      width: 7, height: 7, borderRadius: '50%', display: 'inline-block',
+                      background: googleConnected ? '#22c55e' : '#9ca3af',
+                    }} />
+                    <span style={{ fontSize: 14, fontWeight: 600 }}>
+                      {googleConnected ? 'Conectado' : 'Não conectado'}
                     </span>
+                  </div>
+                  {googleConnected && tokenExpiry && (
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Expira em {tokenExpiry}</span>
                   )}
                 </div>
                 <a
@@ -94,7 +92,7 @@ export default async function ConfiguracoesPage({ params }: Props) {
                     fontSize: 13, fontWeight: 600, padding: '7px 14px', borderRadius: 8,
                     background: googleConnected ? '#f3f4f6' : 'var(--brand)',
                     color: googleConnected ? 'var(--text-secondary)' : '#fff',
-                    textDecoration: 'none',
+                    textDecoration: 'none', whiteSpace: 'nowrap',
                   }}
                 >
                   {googleConnected ? 'Reconectar' : 'Conectar'}
@@ -109,7 +107,7 @@ export default async function ConfiguracoesPage({ params }: Props) {
               Wallet
             </h2>
             <div className="card" style={{ padding: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 14, fontWeight: 600 }}>QR Code do estabelecimento</span>
                 <a
                   href={`https://restaurant-growth-suite-production.up.railway.app/wallet/${params.id}`}
@@ -133,6 +131,8 @@ export default async function ConfiguracoesPage({ params }: Props) {
           </section>
         </div>
       </main>
+
+      <MobileNav restaurantId={params.id} />
     </div>
   );
 }

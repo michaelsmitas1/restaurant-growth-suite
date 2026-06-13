@@ -42,12 +42,6 @@ export default function Sidebar({ restaurantId, restaurantName, googleConnected,
       <aside className="app-sidebar" style={{
         background: 'var(--sidebar-bg)',
         borderRight: '1px solid var(--sidebar-border)',
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'sticky',
-        top: 0,
-        height: '100vh',
-        overflowY: 'auto',
       }}>
         {/* Logo */}
         <div style={{ padding: '20px 16px 14px' }}>

@@ -1,37 +1,30 @@
 # Evidências — Spec 008 (Wallet ponta a ponta)
 
-Status: **código pronto, evidência real pendente.**
+Status: **tudo verificado de ponta a ponta, exceto o screenshot em Android físico.**
 
-Este diretório deve conter o screenshot do fluxo real (scan → telefone →
-pass salvo num Android físico), exigido pelo critério de aceite da spec.
-Ainda não foi gerado porque três pré-requisitos externos, fora do alcance
-de uma sessão automatizada, seguem pendentes:
+## O que já foi verificado com dados/credenciais reais (2026-07-12)
 
-1. **Google Cloud / Issuer account** — `GOOGLE_WALLET_SA_KEY` e
-   `GOOGLE_WALLET_ISSUER_ID` (ver `.env.example`) precisam de uma service
-   account real, criada no Google Cloud Console, e um Google Wallet Issuer
-   account aprovado. Isso é uma ação humana (conta Google, possível
-   aprovação com prazo — ver "Plano B" na spec).
-2. **Projeto Supabase pausado** — o projeto `restaurante-growth-suite`
-   (`hfqclbihfasnigitxpqj`) está com status `INACTIVE`; a migration 003
-   (`supabase/migrations/003_wallet_slug.sql`) não pôde ser aplicada.
-   Requer restaurar o projeto (ação com possível custo — não executada
-   sem aprovação explícita do dono).
-3. **Celular Android físico** — o critério pede evidência de um device
-   real, que este ambiente não tem.
+- Credencial `GOOGLE_WALLET_SA_KEY` real, autenticação OAuth2 confirmada.
+- `scripts/provision-wallet.ts` criou a `LoyaltyClass` real contra um
+  restaurante de teste já existente no banco (dado de teste — hoje não há
+  nenhum restaurante real/piloto cadastrado), classId no formato
+  `<issuer-id>.rest_<restaurant-id>`.
+- `next dev` real + navegador: `/w/<slug-de-teste>` carregado, form
+  preenchido, submetido — redirecionou para `pay.google.com/gp/v/save/<jwt>`
+  → `accounts.google.com` (JWT aceito por um endpoint real do Google).
+- `customers` recebeu a linha com `phone = "+5511987654321"` (normalizado) e
+  `google_pass_object_id` populado.
+- Mesmo telefone reenviado 2x → mesma linha, sem duplicata.
+- 10 cliques reais em "Adicionar 1 selo" no dashboard → confirmado via GET no
+  Google Wallet API a cada incremento; no 10º, `textModulesData.reward_status`
+  mudou para "Pronta para resgate! 🎁" e o botão do dashboard virou "✓ Usar"
+  automaticamente.
 
-## O que já está pronto (verificável sem os itens acima)
+Detalhes completos em `specs/008-wallet-passkit.md` → Aprendizados.
 
-- `npx tsc --noEmit` passa em `apps/dashboard`
-- `scripts/provision-wallet.ts` roda e falha corretamente por falta de
-  credenciais (comportamento esperado sem GCP configurado)
-- Página pública `/w/[slug]`, formulário de telefone, server action de
-  enrollment e sincronização de carimbo com o LoyaltyObject estão
-  implementados — ver `specs/008-wallet-passkit.md` → Aprendizados.
+## O que falta — só isto
 
-## Próximo passo
-
-Quando o dono fornecer `GOOGLE_WALLET_SA_KEY`/`GOOGLE_WALLET_ISSUER_ID` e
-restaurar o projeto Supabase: aplicar a migration 003, rodar
-`npm run provision-wallet -- <restaurantId>`, escanear o QR em
-`/restaurante/[id]/wallet` num Android real e salvar o screenshot aqui.
+**Screenshot do fluxo num Android físico**: scan do QR → `/w/[slug]` →
+"Salvar no Google Wallet" → pass visível no app Google Wallet do celular.
+Isso não pode ser automatizado (precisa de login numa conta Google real e um
+device físico) — fica por conta do dono. Quando tiver, salvar aqui.

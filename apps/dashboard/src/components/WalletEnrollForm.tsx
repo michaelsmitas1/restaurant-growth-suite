@@ -9,7 +9,7 @@ function maskPhone(value: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
-export default function WalletEnrollForm({ restaurantId }: { restaurantId: string }) {
+export default function WalletEnrollForm({ slug }: { slug: string }) {
   const [phone, setPhone] = useState('');
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export default function WalletEnrollForm({ restaurantId }: { restaurantId: strin
     setError(null);
     startTransition(async () => {
       try {
-        const result = await enrollInWallet(restaurantId, phone, consent);
+        const result = await enrollInWallet(slug, phone, consent);
         window.location.href = result.saveUrl;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erro ao salvar. Tente novamente.');

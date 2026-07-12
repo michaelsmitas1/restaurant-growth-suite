@@ -10,9 +10,16 @@ interface EnrollResult {
 
 const GENERIC_ERROR = 'Não foi possível salvar seu cartão agora. Tente novamente em instantes.';
 
-/** Página pública /w/[slug] — cliente informa telefone e recebe o link "Salvar no Google Wallet". */
+/**
+ * Página pública /w/[slug] — cliente informa telefone e recebe o link "Salvar no Google Wallet".
+ *
+ * `slug` é a ÚNICA forma de identificar o restaurante aqui: esta é uma Server
+ * Action chamável diretamente (POST), não só pela página que a renderiza — um
+ * `restaurantId` vindo do cliente não pode ser confiável. O id real é sempre
+ * resolvido server-side a partir do slug, contra o banco.
+ */
 export async function enrollInWallet(
-  restaurantId: string,
+  slug: string,
   phoneRaw: string,
   consent: boolean,
 ): Promise<EnrollResult> {
@@ -23,15 +30,14 @@ export async function enrollInWallet(
 
   const supabase = createClient();
 
-  // Só restaurantes publicados (com slug) podem receber enrollments — evita
-  // que alguém use a action diretamente com um id interno arbitrário.
   const { data: restaurant, error: restErr } = await supabase
     .from('restaurants')
     .select('id, name, reward_description, stamps_required')
-    .eq('id', restaurantId)
-    .not('slug', 'is', null)
+    .eq('slug', slug)
     .single();
   if (restErr || !restaurant) throw new Error('Restaurante não encontrado');
+
+  const restaurantId = restaurant.id;
 
   try {
     const { data: customer, error: custErr } = await supabase

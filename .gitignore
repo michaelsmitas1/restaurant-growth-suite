@@ -7,6 +7,9 @@
 apps/wallet-service/certs/
 apps/wallet-service/passmodel/
 
+# Credenciais Google Wallet (service account JSON) — NUNCA commitar
+apps/dashboard/certs/
+
 # Resumos de onboarding gerados
 onboarding-*.json
 
@@ -29,3 +32,5 @@ npm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+.vercel

@@ -8,10 +8,12 @@
 
 ```
 SPEC ATIVA (nightly-builder):  001 — Memory Store
-SPEC DIURNA (/loop):           008 — Wallet ponta a ponta (Google-first) — código pronto, aguardando credenciais
-BLOQUEIOS:                     008 aguarda GOOGLE_WALLET_SA_KEY/ISSUER_ID reais + restaurar projeto Supabase pausado (hfqclbihfasnigitxpqj)
-DECISÃO PENDENTE:              LoyaltyEngine (014) antes de qualquer spec de loyalty · rate limiting/auth (achado crítico da revisão de segurança da 008 — dashboard inteiro sem auth middleware, ver specs/008-wallet-passkit.md → Aprendizados)
+SPEC DIURNA (/loop):           008 — Wallet ponta a ponta (Google-first) — verificado de ponta a ponta com dados reais (banco só tem dado de teste); só falta screenshot em Android físico
+BLOQUEIOS:                     008 aguarda só a evidência em device Android físico (docs/evidencias/008/) — todo o resto passou com credenciais reais e dado de teste
+DECISÃO PENDENTE:              LoyaltyEngine (014) antes de qualquer spec de loyalty · rate limiting real no /w/[slug] (restaurant_id já resolvido só via slug, mas sem rate limit — ver specs/008-wallet-passkit.md → Aprendizados)
 ```
+
+🔴 **BLOQUEADOR PRÉ-PILOTO:** RLS desabilitado em 8 tabelas (`restaurants`, `customers`, `visits`, `reviews`, `campaigns`, `loyalty_programs`, `message_templates`, `customer_loyalty`) + dashboard sem auth middleware. Deve ser resolvido ANTES do primeiro restaurante real ser cadastrado — não antes disso, mas obrigatório antes disso. Sem data fixa, mas é gate de lançamento, não item de backlog solto.
 
 ---
 

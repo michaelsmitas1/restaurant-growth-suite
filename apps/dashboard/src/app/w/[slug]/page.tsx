@@ -55,7 +55,7 @@ export default async function PublicWalletPage({ params }: Props) {
 
         <p style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>Colecione {stampsRequired} selos</p>
 
-        <WalletEnrollForm restaurantId={restaurant.id} />
+        <WalletEnrollForm slug={params.slug} />
       </div>
     </div>
   );

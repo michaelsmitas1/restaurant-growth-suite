@@ -8,9 +8,9 @@
 
 ```
 SPEC ATIVA (nightly-builder):  001 — Memory Store
-SPEC DIURNA (/loop):           008 — Wallet ponta a ponta (Google-first)
-BLOQUEIOS:                     nenhum após push desta infra para main
-DECISÃO PENDENTE:              LoyaltyEngine (014) antes de qualquer spec de loyalty
+SPEC DIURNA (/loop):           008 — Wallet ponta a ponta (Google-first) — código pronto, aguardando credenciais
+BLOQUEIOS:                     008 aguarda GOOGLE_WALLET_SA_KEY/ISSUER_ID reais + restaurar projeto Supabase pausado (hfqclbihfasnigitxpqj)
+DECISÃO PENDENTE:              LoyaltyEngine (014) antes de qualquer spec de loyalty · rate limiting/auth (achado crítico da revisão de segurança da 008 — dashboard inteiro sem auth middleware, ver specs/008-wallet-passkit.md → Aprendizados)
 ```
 
 ---

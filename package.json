@@ -1,0 +1,20 @@
+{
+  "name": "restaurante-growth-suite-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Scripts operacionais de infra (onboarding, provisionamento) — não é o app. Ver apps/dashboard e apps/wallet-service.",
+  "scripts": {
+    "provision-wallet": "tsx scripts/provision-wallet.ts",
+    "onboard-restaurant": "node scripts/onboard-restaurant.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1",
+    "jose": "^5.9.6"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.1",
+    "typescript": "^5"
+  }
+}

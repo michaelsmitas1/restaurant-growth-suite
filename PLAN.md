@@ -108,6 +108,7 @@ Cada linha aponta para uma spec em `specs/`. A spec é a fonte de verdade — es
 
 ## Aprendizados
 
+- 2026-07-15 · **RLS desabilitado — decisão explícita do dono: adiar.** Auditoria confirmou as 8 tabelas ainda com RLS desabilitado (`restaurants` com 0 linhas hoje — nenhum restaurante real cadastrado, risco imediato baixo). Dono optou por não corrigir agora; segue como gate pré-piloto sem data fixa (ver linha 🔴 no topo), não é item esquecido · RLS
 - Jul 2026 · **Routines na nuvem leem o GitHub, não o disco local.** Infra spec-driven ficou 5 dias sem push e as routines rodaram em vazio — corretamente: recusaram inventar backlog e não tocaram código. Gates validados em produção · sistema
 - Jul 2026 · **Documentação de estado divergia da realidade** (Wallet "pronto" era esqueleto). Regra: Entregue exige critério verificado; pm-weekly audita contra o repo · PLAN
 - Jul 2026 · Spec 005 (iFood): monetários em reais não centavos, ack payload difere da doc, 202 ≠ confirmado, UTF-8 double-encoding — validar sempre contra sandbox · 005

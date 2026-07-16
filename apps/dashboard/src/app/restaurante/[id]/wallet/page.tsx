@@ -2,6 +2,10 @@ import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import MobileNav from '@/components/MobileNav';
+import PrintQRButton from '@/components/PrintQRButton';
+import ProgramaCard from '@/components/ProgramaCard';
+import LoyaltyProgramCard from '@/components/LoyaltyProgramCard';
+import { resolveStampConfig, type LoyaltyProgram } from '@/lib/loyalty';
 import QRCode from 'qrcode';
 
 interface Props { params: { id: string } }
@@ -24,13 +28,30 @@ export default async function WalletPage({ params }: Props) {
     .from('restaurants').select('*').eq('id', params.id).single();
   if (!restaurant) notFound();
 
-  const enrollUrl = `${SERVICE_URL}/wallet/${params.id}`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL || 'localhost:3000'}`;
+
+  // Fetch ALL active loyalty programs for this restaurant
+  const { data: allPrograms } = await supabase
+    .from('loyalty_programs').select('*')
+    .eq('restaurant_id', params.id).eq('active', true)
+    .order('created_at', { ascending: true });
+
+  const programs       = (allPrograms || []) as LoyaltyProgram[];
+  const stampProgram   = programs.find(p => p.type === 'stamps')   || null;
+  const pointsProgram  = programs.find(p => p.type === 'points')   || null;
+  const cashbackProgram = programs.find(p => p.type === 'cashback') || null;
+
+  const { stampsRequired, rewardDescription } =
+    resolveStampConfig(stampProgram, restaurant);
+
+  const enrollUrl = restaurant.slug ? `${appUrl}/w/${restaurant.slug}` : `${SERVICE_URL}/wallet/${params.id}`;
 
   const [
     { count: totalCustomers },
     { data: customers },
     { count: stampsToday },
     { count: nearReward },
+    { data: loyaltyRows },
   ] = await Promise.all([
     supabase.from('customers').select('*', { count: 'exact', head: true }).eq('restaurant_id', params.id),
     supabase.from('customers').select('*').eq('restaurant_id', params.id).order('last_visit_at', { ascending: false }).limit(8),
@@ -39,8 +60,26 @@ export default async function WalletPage({ params }: Props) {
       .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
     supabase.from('customers').select('*', { count: 'exact', head: true })
       .eq('restaurant_id', params.id)
-      .gte('current_stamps', Math.max(1, (restaurant.stamps_required || 10) - 2)),
+      .gte('current_stamps', Math.max(1, stampsRequired - 2)),
+    supabase.from('customer_loyalty')
+      .select('program_id, lifetime_total')
+      .eq('restaurant_id', params.id),
   ]);
+
+  type LoyaltyRow = { program_id: string; lifetime_total: number };
+  const rows = (loyaltyRows || []) as LoyaltyRow[];
+
+  function statsFor(programId: string | undefined) {
+    if (!programId) return { totalCustomers: 0, totalEarned: 0 };
+    const matching = rows.filter(r => r.program_id === programId);
+    return {
+      totalCustomers: matching.length,
+      totalEarned:    matching.reduce((s, r) => s + Number(r.lifetime_total), 0),
+    };
+  }
+
+  const pointsStats   = statsFor(pointsProgram?.id);
+  const cashbackStats = statsFor(cashbackProgram?.id);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const qrSvg: string = await (QRCode as any).toString(enrollUrl, {
@@ -48,8 +87,6 @@ export default async function WalletPage({ params }: Props) {
     color: { dark: '#111111', light: '#ffffff' },
     errorCorrectionLevel: 'M',
   });
-
-  const stampsRequired = restaurant.stamps_required || 10;
 
   return (
     <div className="app-layout">
@@ -67,16 +104,16 @@ export default async function WalletPage({ params }: Props) {
               Fidelidade
             </h1>
             <p style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
-              {stampsRequired} selos para recompensa
+              {stampsRequired} selos · {rewardDescription}
             </p>
           </div>
         </div>
 
-        {/* QR + stats layout: stack on mobile */}
+        {/* QR + stats layout */}
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
 
           {/* QR Code card */}
-          <div className="card" style={{
+          <div className="card print-qr-target" style={{
             padding: 24, display: 'flex', flexDirection: 'column',
             alignItems: 'center', gap: 14, minWidth: 220, flex: '0 0 auto',
           }}>
@@ -91,28 +128,31 @@ export default async function WalletPage({ params }: Props) {
               <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10, lineHeight: 1.5 }}>
                 Imprima ou exiba no balcão.<br />Cliente escaneia → adiciona ao Wallet.
               </p>
-              <a
-                href={enrollUrl} target="_blank" rel="noopener noreferrer"
-                style={{
-                  display: 'inline-block', fontSize: 12, fontWeight: 600,
-                  color: 'var(--brand)', textDecoration: 'none',
-                  background: 'var(--brand-light)', padding: '7px 14px', borderRadius: 8,
-                }}
-              >
-                Abrir página →
-              </a>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <a
+                  href={enrollUrl} target="_blank" rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-block', fontSize: 12, fontWeight: 600,
+                    color: 'var(--brand)', textDecoration: 'none',
+                    background: 'var(--brand-light)', padding: '7px 14px', borderRadius: 8,
+                  }}
+                >
+                  Abrir página →
+                </a>
+                <PrintQRButton />
+              </div>
             </div>
           </div>
 
-          {/* Right column — stretches to fill */}
+          {/* Right column */}
           <div style={{ flex: 1, minWidth: 200, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
             {/* Mini metrics */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
               {[
-                { label: 'No Wallet',    value: String(totalCustomers || 0) },
-                { label: 'Selos hoje',   value: String(stampsToday || 0) },
-                { label: 'Prox. recomp.',value: String(nearReward || 0) },
+                { label: 'No Wallet',     value: String(totalCustomers || 0) },
+                { label: 'Selos hoje',    value: String(stampsToday || 0) },
+                { label: 'Prox. recomp.', value: String(nearReward || 0) },
               ].map(m => (
                 <div key={m.label} className="metric-card" style={{ padding: '16px 16px' }}>
                   <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 6 }}>{m.label}</div>
@@ -121,24 +161,32 @@ export default async function WalletPage({ params }: Props) {
               ))}
             </div>
 
-            {/* Programa */}
-            <div className="card" style={{ padding: '14px 18px' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
-                Programa de fidelidade
-              </div>
-              {[
-                { label: 'Carimbos para recompensa', value: String(stampsRequired) },
-                { label: 'Recompensa',               value: restaurant.reward_description || 'Não definida' },
-              ].map((row, i) => (
-                <div key={row.label} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '8px 0', borderTop: i > 0 ? '1px solid var(--border-light)' : 'none', gap: 8,
-                }}>
-                  <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{row.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>{row.value}</span>
-                </div>
-              ))}
-            </div>
+            {/* Cartão de selos */}
+            <ProgramaCard
+              restaurantId={params.id}
+              program={stampProgram}
+              programName={stampProgram?.name || 'Cartão de selos'}
+              stampsRequired={stampsRequired}
+              rewardDescription={rewardDescription}
+            />
+
+            {/* Pontos */}
+            <LoyaltyProgramCard
+              restaurantId={params.id}
+              type="points"
+              program={pointsProgram}
+              totalCustomers={pointsStats.totalCustomers}
+              totalEarned={pointsStats.totalEarned}
+            />
+
+            {/* Cashback */}
+            <LoyaltyProgramCard
+              restaurantId={params.id}
+              type="cashback"
+              program={cashbackProgram}
+              totalCustomers={cashbackStats.totalCustomers}
+              totalEarned={cashbackStats.totalEarned}
+            />
 
             {/* Clientes recentes */}
             {customers && customers.length > 0 && (

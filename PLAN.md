@@ -8,10 +8,12 @@
 
 ```
 SPEC ATIVA (nightly-builder):  001 — Memory Store
-SPEC DIURNA (/loop):           008 — Wallet ponta a ponta (Google-first)
-BLOQUEIOS:                     nenhum após push desta infra para main
-DECISÃO PENDENTE:              LoyaltyEngine (014) antes de qualquer spec de loyalty
+SPEC DIURNA (/loop):           008 — Wallet ponta a ponta (Google-first) — verificado de ponta a ponta com dados reais (banco só tem dado de teste); só falta screenshot em Android físico
+BLOQUEIOS:                     008 aguarda só a evidência em device Android físico (docs/evidencias/008/) — todo o resto passou com credenciais reais e dado de teste
+DECISÃO PENDENTE:              LoyaltyEngine (014) antes de qualquer spec de loyalty · rate limiting real no /w/[slug] (restaurant_id já resolvido só via slug, mas sem rate limit — ver specs/008-wallet-passkit.md → Aprendizados)
 ```
+
+🔴 **BLOQUEADOR PRÉ-PILOTO:** RLS desabilitado em 8 tabelas (`restaurants`, `customers`, `visits`, `reviews`, `campaigns`, `loyalty_programs`, `message_templates`, `customer_loyalty`) + dashboard sem auth middleware. Deve ser resolvido ANTES do primeiro restaurante real ser cadastrado — não antes disso, mas obrigatório antes disso. Sem data fixa, mas é gate de lançamento, não item de backlog solto.
 
 ---
 
@@ -106,6 +108,7 @@ Cada linha aponta para uma spec em `specs/`. A spec é a fonte de verdade — es
 
 ## Aprendizados
 
+- 2026-07-15 · **RLS desabilitado — decisão explícita do dono: adiar.** Auditoria confirmou as 8 tabelas ainda com RLS desabilitado (`restaurants` com 0 linhas hoje — nenhum restaurante real cadastrado, risco imediato baixo). Dono optou por não corrigir agora; segue como gate pré-piloto sem data fixa (ver linha 🔴 no topo), não é item esquecido · RLS
 - Jul 2026 · **Routines na nuvem leem o GitHub, não o disco local.** Infra spec-driven ficou 5 dias sem push e as routines rodaram em vazio — corretamente: recusaram inventar backlog e não tocaram código. Gates validados em produção · sistema
 - Jul 2026 · **Documentação de estado divergia da realidade** (Wallet "pronto" era esqueleto). Regra: Entregue exige critério verificado; pm-weekly audita contra o repo · PLAN
 - Jul 2026 · Spec 005 (iFood): monetários em reais não centavos, ack payload difere da doc, 202 ≠ confirmado, UTF-8 double-encoding — validar sempre contra sandbox · 005

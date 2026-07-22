@@ -86,17 +86,14 @@ export default async function ConfiguracoesPage({ params }: Props) {
                     <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Expira em {tokenExpiry}</span>
                   )}
                 </div>
-                <a
-                  href={`https://restaurant-growth-suite-production.up.railway.app/auth/google/${params.id}`}
-                  style={{
-                    fontSize: 13, fontWeight: 600, padding: '7px 14px', borderRadius: 8,
-                    background: googleConnected ? '#f3f4f6' : 'var(--brand)',
-                    color: googleConnected ? 'var(--text-secondary)' : '#fff',
-                    textDecoration: 'none', whiteSpace: 'nowrap',
-                  }}
-                >
-                  {googleConnected ? 'Reconectar' : 'Conectar'}
-                </a>
+                {/* Fluxo de conexão por restaurante ainda não existe (spec-024, Fase 3) —
+                    o antigo endpoint no wallet-service (Railway) foi desativado. */}
+                <span style={{
+                  fontSize: 13, fontWeight: 600, padding: '7px 14px', borderRadius: 8,
+                  background: '#f3f4f6', color: 'var(--text-muted)', whiteSpace: 'nowrap',
+                }}>
+                  Em breve
+                </span>
               </div>
             </div>
           </section>
@@ -110,7 +107,7 @@ export default async function ConfiguracoesPage({ params }: Props) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 14, fontWeight: 600 }}>QR Code do estabelecimento</span>
                 <a
-                  href={`https://restaurant-growth-suite-production.up.railway.app/wallet/${params.id}`}
+                  href={`${process.env.NEXT_PUBLIC_APP_URL}/${restaurant.slug}`}
                   target="_blank" rel="noopener noreferrer"
                   style={{
                     fontSize: 13, fontWeight: 600, padding: '7px 14px', borderRadius: 8,
@@ -120,12 +117,13 @@ export default async function ConfiguracoesPage({ params }: Props) {
                   Ver página →
                 </a>
               </div>
+              {/* Página pública [slug] ainda não implementada (spec-010/023, Fase 2) */}
               <code style={{
                 display: 'block', fontSize: 11, background: '#f9fafb',
                 border: '1px solid var(--border)', borderRadius: 7,
                 padding: '8px 12px', wordBreak: 'break-all', color: 'var(--text-secondary)',
               }}>
-                {`https://restaurant-growth-suite-production.up.railway.app/wallet/${params.id}`}
+                {`${process.env.NEXT_PUBLIC_APP_URL}/${restaurant.slug}`}
               </code>
             </div>
           </section>

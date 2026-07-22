@@ -93,12 +93,11 @@ export default function Sidebar({ restaurantId, restaurantName, googleConnected,
             Google {googleConnected ? 'conectado' : 'desconectado'}
           </div>
           {!googleConnected && (
-            <a
-              href={`https://restaurant-growth-suite-production.up.railway.app/auth/google/${restaurantId}`}
-              style={{ fontSize: 11.5, color: 'var(--brand)', textDecoration: 'none', fontWeight: 600 }}
-            >
-              Conectar →
-            </a>
+            // Fluxo de conexão por restaurante ainda não existe (spec-024, Fase 3) —
+            // o antigo endpoint no wallet-service (Railway) foi desativado.
+            <span style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600 }}>
+              Conectar (em breve)
+            </span>
           )}
         </div>
 

@@ -6,8 +6,6 @@ import QRCode from 'qrcode';
 
 interface Props { params: { id: string } }
 
-const SERVICE_URL = process.env.SERVICE_URL || 'https://wallet-service-production.up.railway.app';
-
 function timeSince(iso: string | null) {
   if (!iso) return 'nunca';
   const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
@@ -24,7 +22,9 @@ export default async function WalletPage({ params }: Props) {
     .from('restaurants').select('*').eq('id', params.id).single();
   if (!restaurant) notFound();
 
-  const enrollUrl = `${SERVICE_URL}/wallet/${params.id}`;
+  // Página pública [slug] ainda não implementada (spec-010/023, Fase 2) —
+  // o antigo endpoint no wallet-service (Railway) foi desativado.
+  const enrollUrl = `${process.env.NEXT_PUBLIC_APP_URL}/${restaurant.slug}`;
 
   const [
     { count: totalCustomers },

@@ -15,8 +15,8 @@ Nunca pular fase sem fechar a anterior.
 ## Status global
 
 ```
-Fase 0 — Fundação (reset + auth + port)   🔴 EM ANDAMENTO
-Fase 2 — MVP 1                            ⏸️  BLOQUEADA (aguarda Fase 0)
+Fase 0 — Fundação (reset + auth + port)   🟢 CONCLUÍDA (0a-0f) — 2 ações manuais pendentes (ver 0e/0f)
+Fase 2 — MVP 1                            🟢 DESBLOQUEADA
 Fase 3 — Paralela                         🔵 DESBLOQUEADA (independente)
 ```
 
@@ -236,15 +236,40 @@ refletir isso.
 
 ---
 
-### 0f. Limpeza de referências legadas
+### 0f. Limpeza de referências legadas ✅ 2026-07-22 (domínio Vercel pendente — ação manual)
 
 **Critérios de aceite:**
-- [ ] Zero referências a URLs do Railway no dashboard
-- [ ] Zero referências a `/w/[slug]` em código
-- [ ] Zero referências a `loyalty_programs`/`customer_loyalty` (schema velho)
-- [ ] `NEXT_PUBLIC_APP_URL` = https://app.balcao.ai em todos os ambientes
-- [ ] Domínio app.balcao.ai configurado no Vercel
-- [ ] `tsc --noEmit` passa
+- [x] Zero referências a URLs do Railway no dashboard — 5 usos encontrados
+      (`Sidebar.tsx`, `restaurante/[id]/wallet/page.tsx`,
+      `restaurante/[id]/configuracoes/page.tsx`) e removidos: os links de
+      "Conectar Google"/OAuth viram um estado "em breve" (o fluxo real é
+      spec-024, Fase 3, ainda não existe); os links/QR do wallet passam a
+      usar `${NEXT_PUBLIC_APP_URL}/${restaurant.slug}` (página pública
+      `[slug]` ainda não implementada — spec-010/023, Fase 2 — mas o domínio
+      já é o correto). `grep -ri railway apps/dashboard/src` só retorna
+      comentários explicando a remoção, nenhuma URL.
+- [x] Zero referências a `/w/[slug]` em código — confirmado (já estava limpo).
+- [x] Zero referências a `loyalty_programs`/`customer_loyalty` — confirmado
+      (já estava limpo).
+- [x] `NEXT_PUBLIC_APP_URL` = https://app.balcao.ai em todos os ambientes —
+      adicionado a `.env.example` e ao `.env` local (mesmo valor, conforme
+      CLAUDE.md — QRs/links de wallet precisam de domínio público real
+      mesmo em dev).
+- [ ] Domínio app.balcao.ai configurado no Vercel — **não feito nesta
+      sessão**: é mudança de infraestrutura de produção (DNS + configuração
+      do projeto Vercel `restaurante-growth-suite`,
+      `prj_1z1GSNdI7qPTL8Fk3iRgyeSvxjqt`), fora do escopo de edição de
+      arquivos e sem acesso a DNS/registrador. Ação manual: Vercel →
+      Project Settings → Domains → adicionar `app.balcao.ai` + configurar
+      os registros DNS indicados pela Vercel no registrador do domínio.
+- [x] `tsc --noEmit` passa — 0 erros. `vitest run` → 23/23.
+
+**Nota:** as páginas legadas em `restaurante/[id]/{avaliacoes,campanhas,
+clientes,wallet,configuracoes}` continuam consultando colunas/tabelas
+removidas em 0a (`stamps_required`, `reward_description`,
+`customers.restaurant_id`, `reviews`, `campaigns`) e vão quebrar em runtime
+até a Fase 2 reconstruir essas telas — fora do escopo desta tarefa
+(limpeza de *referências legadas específicas*, não reescrita de páginas).
 
 ---
 

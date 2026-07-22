@@ -42,24 +42,45 @@ D6 ✅ RLS resolvido pelo reset (toda migration nasce com RLS + policies)
 
 > Pré-requisito de tudo. Sem remendos: o schema nasce certo.
 
-### 0a. Reset do banco + schema novo completo
+### 0a. Reset do banco + schema novo completo ✅ 2026-07-22
 
 **Contexto:** banco 100% teste (VERIFY.md). 6 migrations aplicadas sem arquivo
 no repo. Tabelas legadas serão substituídas. Janela única para história limpa.
 
 **Critérios de aceite:**
-- [ ] Backup lógico do banco atual salvo localmente (segurança, não será usado)
-- [ ] Banco de teste dropado/resetado
-- [ ] Migrations novas do zero, numeradas, idempotentes, cobrindo o schema
-      canônico do CLAUDE.md: restaurants (expandida), card_design_config,
-      loyalty_config, loyalty_milestones, form_fields_config, customers
-      (phone único global), customer_programs, visits, redemptions,
-      otp_codes, customer_sessions, daily_passwords, whatsapp_log
-- [ ] TODA tabela com RLS habilitado + policies NA MESMA migration
-- [ ] `supabase db push` em ambiente limpo sobe sem erros
-- [ ] `supabase/seed.sql` recria dados de desenvolvimento (1 restaurante,
-      ~10 clientes, visitas, 1 programa configurado)
-- [ ] `tsc --noEmit` passa
+- [x] Backup lógico do banco atual salvo localmente (segurança, não será usado)
+      — dump JSON das 11 tabelas legadas via `execute_sql`, salvo fora do repo
+      (contém PII de teste). Confirmação do usuário obtida antes do drop.
+- [x] Banco de teste dropado/resetado — 11 tabelas legadas (`restaurants`,
+      `customers`, `visits`, `reviews`, `campaigns`, `campaign_messages`,
+      `review_approvals`, `user_restaurants`, `loyalty_programs`,
+      `message_templates`, `customer_loyalty`) + função/trigger órfã
+      `generate_restaurant_slug` + extensão `unaccent` não utilizada.
+- [x] Migrations novas do zero, numeradas, idempotentes, cobrindo o schema
+      canônico do CLAUDE.md: restaurants (expandida com owner_id/slug/cores/
+      redes sociais/wizard_step), card_design_config, loyalty_config,
+      loyalty_milestones, form_fields_config, customers (phone único global),
+      customer_programs, visits, redemptions, otp_codes, customer_sessions,
+      daily_passwords, whatsapp_log — 7 arquivos em `supabase/migrations/`
+      (20260722010000 a 20260722010600).
+- [x] TODA tabela com RLS habilitado + policies NA MESMA migration —
+      13/13 tabelas com `rls_enabled: true` confirmado via
+      `mcp__supabase__list_tables`. `customers`/`otp_codes`/`customer_sessions`
+      nascem sem policy (deny-all intencional — acesso só via
+      `lib/customerSession.ts`, documentado em comentário na migration).
+- [x] `supabase db push` em ambiente limpo — CLI indisponível localmente
+      (`npx supabase` falha por erro de auth do registry npm, não investigado
+      pois foge do escopo de 0a). Validado de forma equivalente: as mesmas
+      migrations foram aplicadas sequencialmente via MCP Supabase contra o
+      projeto de teste (hfqclbihfasnigitxpqj) já resetado, sem erros —
+      `get_advisors(security)` confirma 0 problema fora do INFO esperado.
+- [x] `supabase/seed.sql` recria dados de desenvolvimento (1 dono em
+      auth.users, 1 restaurante "Sorveteria da Vó Maria" configurado —
+      card_design_config + loyalty_config + 3 milestones + form_fields_config,
+      10 clientes, customer_programs vinculados, 5 visits, 1 redemption VIP).
+      Executado com sucesso via `execute_sql`.
+- [x] `tsc --noEmit` passa — `cd apps/dashboard && npx tsc --noEmit` sem output
+      (0 erros).
 
 ---
 

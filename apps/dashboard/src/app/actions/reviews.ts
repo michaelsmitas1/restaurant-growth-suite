@@ -1,9 +1,9 @@
 'use server';
-import { createClient } from '@/lib/supabase/server';
+import { requireOwner } from '@/lib/auth/requireOwner';
 import { revalidatePath } from 'next/cache';
 
 export async function approveReview(reviewId: string, restaurantId: string) {
-  const supabase = createClient();
+  const { supabase } = await requireOwner(restaurantId);
   await supabase
     .from('reviews')
     .update({ status: 'approved', responded_at: new Date().toISOString() })
@@ -13,7 +13,7 @@ export async function approveReview(reviewId: string, restaurantId: string) {
 }
 
 export async function ignoreReview(reviewId: string, restaurantId: string) {
-  const supabase = createClient();
+  const { supabase } = await requireOwner(restaurantId);
   await supabase
     .from('reviews')
     .update({ status: 'ignored' })
@@ -23,7 +23,7 @@ export async function ignoreReview(reviewId: string, restaurantId: string) {
 }
 
 export async function saveResponse(reviewId: string, restaurantId: string, finalResponse: string) {
-  const supabase = createClient();
+  const { supabase } = await requireOwner(restaurantId);
   await supabase
     .from('reviews')
     .update({

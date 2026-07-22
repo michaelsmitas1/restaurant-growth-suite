@@ -84,16 +84,44 @@ no repo. Tabelas legadas serão substituídas. Janela única para história limp
 
 ---
 
-### 0b. Auth do dono — middleware + posse
+### 0b. Auth do dono — middleware + posse ✅ 2026-07-22
+
+**Achado crítico corrigido:** `lib/supabase/server.ts` usava `SUPABASE_SERVICE_KEY`
+(bypassa RLS) em TODAS as pages/actions do dashboard, e `middleware.ts` era um
+no-op (`return NextResponse.next()` sem checar sessão). Ambos violavam
+CLAUDE.md diretamente — corrigidos nesta tarefa.
 
 **Critérios de aceite:**
-- [ ] `middleware.ts` protege todas as rotas `(dashboard)/`
-- [ ] Sem sessão → redirect `/login`
-- [ ] Toda Server Action: `getUser()` + validação de posse via `owner_id`
-- [ ] `createServerClient()` (anon + sessão) em todas as pages/actions do dashboard
-- [ ] `SUPABASE_SERVICE_KEY` apenas nos 3 lugares autorizados
-- [ ] `next.config.js`: `allowedOrigins` restrito ao domínio
-- [ ] `tsc --noEmit` passa
+- [x] `middleware.ts` protege todas as rotas — `lib/supabase/middleware.ts`
+      (`updateSession`) chama `supabase.auth.getUser()` a cada request; como
+      o app ainda não tem o route group `(dashboard)/` (rotas atuais:
+      `/`, `/restaurante/[id]/*`), a proteção cobre tudo exceto `/login` e
+      `/auth/callback`. Nota: quando a Fase 2 adicionar rotas de cliente
+      (`[slug]/`, `/scan`, etc.), `PUBLIC_PATHS`/matcher precisam ser
+      revisados para não bloquear o Nível 2 de auth.
+- [x] Sem sessão → redirect `/login` — verificado ao vivo:
+      `curl -s -o /dev/null -w '%{http_code} %{redirect_url}' localhost:3000/`
+      → `307 http://localhost:3000/login`; `GET /login` → `200`.
+- [x] Toda Server Action: `getUser()` + validação de posse via `owner_id` —
+      novo helper `lib/auth/requireOwner.ts` implementa o padrão exato do
+      CLAUDE.md; aplicado às 3 Server Actions existentes em
+      `app/actions/reviews.ts`.
+- [x] `createServerClient()` (anon + sessão) em todas as pages/actions —
+      `lib/supabase/server.ts` reescrito para usar
+      `NEXT_PUBLIC_SUPABASE_ANON_KEY` (era `SUPABASE_SERVICE_KEY`).
+- [x] `SUPABASE_SERVICE_KEY` apenas nos 3 lugares autorizados — grep
+      confirma zero ocorrências em `apps/dashboard/src` após a correção
+      (lib/googleWallet.ts e lib/customerSession.ts ainda não existem;
+      chegam em 0c/0d).
+- [x] `next.config.js`: `allowedOrigins` restrito a `app.balcao.ai` e
+      `localhost:3000` (era `['*']`).
+- [x] `tsc --noEmit` passa — 0 erros.
+
+**Fora do escopo desta tarefa (não tocado):** as páginas legadas
+`app/restaurante/[id]/{avaliacoes,campanhas,clientes,configuracoes,wallet}`
+consultam tabelas dropadas em 0a (`reviews`, `campaigns`, `customers.restaurant_id`)
+e vão quebrar em runtime até serem reconstruídas na Fase 2 (spec-010/2.9) ou
+removidas em 0f — efeito esperado do reset (D3), não introduzido aqui.
 
 ---
 

@@ -125,20 +125,43 @@ removidas em 0f — efeito esperado do reset (D3), não introduzido aqui.
 
 ---
 
-### 0c. Auth do cliente — infraestrutura OTP + sessão
+### 0c. Auth do cliente — infraestrutura OTP + sessão ✅ 2026-07-22
 
 **Contexto:** base do Nível 2 de auth (CLAUDE.md). Consumida pelas specs
 023 (cadastro), 019 (web wallet) e 022 (senha do dia).
 
 **Critérios de aceite:**
-- [ ] `lib/customerSession.ts`: criar sessão, validar cookie, revogar
-- [ ] Envio de OTP via Evolution API (WhatsApp) funcional
-- [ ] Envio de OTP via SMS: interface pronta, provider stub (definir provider depois)
-- [ ] Regras: código 6 dígitos, expira 5 min, máx 3 tentativas,
-      rate limit 3 códigos/telefone/hora
-- [ ] Cookie httpOnly assinado, 30 dias
-- [ ] Testes Vitest: geração, expiração, tentativas, rate limit
-- [ ] `tsc --noEmit` passa
+- [x] `lib/customerSession.ts`: `createCustomerSession`, `getCustomerSession`,
+      `revokeCustomerSession` — único lugar (além de `serviceClient.ts`
+      interno e `googleWallet.ts` em 0d) que usa `createServiceClient()`,
+      toda query escopada por `token_hash`/`customer_id`.
+- [x] Envio de OTP via Evolution API (WhatsApp) — `lib/whatsapp/evolution.ts`,
+      `POST {EVOLUTION_API_URL}/message/sendText/{EVOLUTION_INSTANCE}`
+      (formato confirmado nos workflows n8n existentes em `apps/n8n-workflows/`).
+- [x] Envio de OTP via SMS — `lib/sms/index.ts`: interface `SmsProvider` +
+      stub que lança erro explícito se chamado (provider real fica para
+      quando a decisão aberta em PLAN.md for resolvida).
+- [x] Regras (código 6 dígitos, expira 5 min, máx 3 tentativas, rate limit
+      3/telefone/hora) — implementadas como funções puras em `lib/otp/rules.ts`,
+      consumidas por `lib/otp/index.ts` (`requestOtp`/`verifyOtp`, via
+      `otp_codes`).
+- [x] Cookie httpOnly assinado, 30 dias — `customerSession.ts` assina o
+      token com HMAC-SHA256 (`CUSTOMER_SESSION_SECRET`) antes de gravar em
+      `customer_sessions.token_hash`; cookie `balcao_customer_session`
+      (httpOnly, secure em produção, sameSite lax, 30 dias).
+- [x] Testes Vitest: geração, expiração, tentativas, rate limit — Vitest
+      configurado (`vitest.config.ts`, script `test`), 18/18 testes passando
+      em `lib/otp/rules.test.ts` + `lib/phone.test.ts`
+      (`npx vitest run` → `Test Files 2 passed (2)`, `Tests 18 passed (18)`).
+- [x] `tsc --noEmit` passa — 0 erros.
+
+**Notas:** novas env vars documentadas em `.env.example`
+(`EVOLUTION_INSTANCE`, `CUSTOMER_SESSION_SECRET`, `SMS_PROVIDER_API_KEY`) e
+preenchidas no `.env` local com valor de desenvolvimento. `otp_codes.code`
+fica em texto plano no banco (nome de coluna exigido pelo schema canônico
+0a) — aceitável porque a tabela nasce sem policies (deny-all) e o código
+expira em 5 min/uso único; sem acesso via `EVOLUTION_API_URL`/`_KEY` reais,
+o envio de WhatsApp não foi testado end-to-end nesta sessão.
 
 ---
 

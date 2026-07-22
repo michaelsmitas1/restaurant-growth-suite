@@ -214,13 +214,25 @@ refletir isso.
 
 ---
 
-### 0e. Setup de testes + CI
+### 0e. Setup de testes + CI ✅ 2026-07-22 (branch protection pendente — ação manual)
 
 **Critérios de aceite:**
-- [ ] Vitest configurado, primeiro teste rodando (pode ser dos itens 0c/0d)
-- [ ] GitHub Actions: `tsc --noEmit` + `vitest run` em todo PR
-- [ ] PR com falha não mergeia (branch protection em main)
-- [ ] Badge de status no README (opcional)
+- [x] Vitest configurado, primeiro teste rodando — feito em 0c
+      (`vitest.config.ts`), 23/23 passando após 0c/0d (`rules.test.ts`,
+      `phone.test.ts`, `googleWallet.test.ts`).
+- [x] GitHub Actions: `tsc --noEmit` + `vitest run` em todo PR —
+      `.github/workflows/ci.yml`, job `dashboard` (`working-directory:
+      apps/dashboard`), roda em `pull_request`/`push` para `main`.
+- [ ] PR com falha não mergeia (branch protection em main) — **não
+      configurado nesta sessão**: é uma mudança de configuração do
+      repositório GitHub (afeta todos os colaboradores), fora do escopo de
+      uma edição de arquivo, e o check `dashboard` só existe para o GitHub
+      selecionar como obrigatório depois de rodar pelo menos uma vez (ou
+      seja, depois deste PR ser aberto/mergeado). Ação manual sugerida ao
+      usuário: Settings → Branches → Branch protection rule para `main` →
+      exigir o status check `dashboard`.
+- [x] Badge de status no README — adicionado no topo do `README.md`,
+      apontando para `actions/workflows/ci.yml/badge.svg`.
 
 ---
 

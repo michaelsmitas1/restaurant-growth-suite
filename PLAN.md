@@ -165,20 +165,52 @@ o envio de WhatsApp não foi testado end-to-end nesta sessão.
 
 ---
 
-### 0d. Port da lib Google Wallet
+### 0d. Port da lib Google Wallet ✅ 2026-07-22
 
 **Contexto:** `lib/googleWallet.ts` da branch spec-008 é a peça mais bem
 construída do audit. Portar para main adaptada ao schema novo
 (customer_programs em vez de customers.current_stamps).
 
 **Critérios de aceite:**
-- [ ] `lib/googleWallet.ts` em main: getAccessToken, ensureLoyaltyClass,
-      ensureLoyaltyObject, patchLoyaltyObjectStamps, buildSaveToWalletUrl
-- [ ] Adaptada ao schema novo (selos vêm de customer_programs)
-- [ ] IDs determinísticos, tratamento 404/409, erros sanitizados
-- [ ] Teste de integração com credenciais reais (classe criada, object gerado)
-- [ ] Screenshot do fluxo será feito na rota nova (spec-023) — critério movido
-- [ ] `tsc --noEmit` passa
+- [x] `lib/googleWallet.ts` em main: `getAccessToken`, `ensureLoyaltyClass`,
+      `ensureLoyaltyObject`, `patchLoyaltyObjectStamps`, `buildSaveToWalletUrl`
+      — portadas de `spec-008-wallet-google` (JWT + service account via `jose`,
+      sem `googleapis`).
+- [x] Adaptada ao schema novo — `ensureLoyaltyObject`/`patchLoyaltyObjectStamps`
+      recebem `CustomerProgramForWallet` (selos de `customer_programs`) +
+      `NextMilestoneForWallet | null` (próximo marco não atingido, ou `null`
+      quando VIP); `rewardStatusText`/`balanceText` isolados e testados
+      (5 testes em `googleWallet.test.ts`).
+- [x] IDs determinísticos — `classId` por `restaurant.id`
+      (`{issuer}.rest_{id}`), **`objectId` agora por `customer_program.id`**
+      (`{issuer}.prog_{id}`), não mais por `customer.id`: no schema novo um
+      cliente tem N programas (um por restaurante), então o objectId precisa
+      ser por vínculo, não por pessoa — desvio deliberado do código original.
+- [x] Tratamento 404/409, erros sanitizados — mantido (404 em PATCH = pass
+      ainda não salvo, não é erro; 409 em POST = corrida entre GET/POST, não
+      é erro); mensagens de erro passaram a expor só o status HTTP, sem o
+      corpo cru da resposta.
+- [x] Teste de integração com credenciais reais — `GOOGLE_WALLET_SA_KEY`/
+      `GOOGLE_WALLET_ISSUER_ID` já estavam configuradas no `.env` local.
+      Rodado ao vivo contra o restaurante e customer_program de teste
+      (seed 0a): `getAccessToken` → token obtido; `ensureLoyaltyClass` →
+      `classId 3388000000023157990.rest_9a588819e3fc4817a0f755a5974c4c5b`;
+      `ensureLoyaltyObject` → `objectId ...prog_4bc82a0f90e14b72b87e06964c92ac6b`;
+      `buildSaveToWalletUrl` → JWT válido; `patchLoyaltyObjectStamps` →
+      confirmado via GET subsequente na API real: `loyaltyPoints.balance
+      "3/3"`, `textModulesData[0].body "Pronta para resgate! 🎁"`.
+- [x] Screenshot do fluxo — confirmado como movido para spec-023 (Fase 2),
+      não se aplica a esta tarefa de infraestrutura.
+- [x] `tsc --noEmit` passa — 0 erros. `npx vitest run` → 23/23 (inclui os
+      5 novos testes de `googleWallet.test.ts`).
+
+**Nota de divergência com CLAUDE.md:** a seção de variáveis de ambiente do
+CLAUDE.md lista `GOOGLE_APPLICATION_CREDENTIALS` (caminho de arquivo); o
+código real (branch spec-008 e `.env` já configurado) usa
+`GOOGLE_WALLET_SA_KEY` (JSON inline) + `GOOGLE_WALLET_ISSUER_ID`, mais
+compatível com deploy serverless (Vercel). Mantive a convenção que já está
+configurada e comprovadamente funcional; vale atualizar o CLAUDE.md para
+refletir isso.
 
 ---
 

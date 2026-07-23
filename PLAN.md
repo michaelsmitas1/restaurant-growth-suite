@@ -296,26 +296,57 @@ até a Fase 2 reconstruir essas telas — fora do escopo desta tarefa
 
 > Ordem por dependência real. Cada spec consome o que a anterior entrega.
 
-### 2.0 Design System — MASTER.md
+### 2.0 Design System — MASTER.md ✅ 2026-07-23
 
 **Contexto:** gerar a fonte de consistência visual antes da primeira tela.
 
 **Critérios de aceite:**
-- [ ] Rodar ui-ux-pro-max: `search.py "restaurant loyalty program dashboard
-      brazilian" --design-system -p "Remy" --persist`
-- [ ] `design-system/MASTER.md` gerado e commitado
-- [ ] MASTER editado: tokens da skill SUBSTITUÍDOS pelos tokens do CLAUDE.md
-      (os do branding vencem sempre)
-- [ ] Componentes base criados com os tokens: Button, Input, Card, Badge,
-      Toggle, Select (em `components/ui/`)
-- [ ] `globals.css` com todos os tokens do CLAUDE.md
-- [ ] Fontes Manrope + IBM Plex Mono carregadas (next/font)
-- [ ] Página de referência `/dev/ui` renderizando todos os componentes
-      (dev-only, não deployada em produção)
-- [ ] Skill ativa nesta task: ui-ux-pro-max (direção) + Impeccable
-      (polimento). Taste permanece instalada, não invocada (D9)
-- [ ] Componente de tela de aceite/consentimento incluído nos base
-      components (reutilizado pela spec-023)
+- [x] Rodar ui-ux-pro-max: `search.py "restaurant loyalty program dashboard
+      brazilian" --design-system -p "Remy" --persist` — executado via skill
+      `ui-ux-pro-max:ui-ux-pro-max`, gerou `design-system/remy/MASTER.md`
+      (categoria "Airline", paleta vermelho-mostarda — descartados, ver
+      próximo item).
+- [x] `design-system/MASTER.md` gerado e commitado — movido de
+      `design-system/remy/MASTER.md` para o caminho canônico
+      `design-system/MASTER.md` (CLAUDE.md/PLAN.md não usam sub-pasta por
+      projeto).
+- [x] MASTER editado: tokens da skill SUBSTITUÍDOS pelos tokens do CLAUDE.md
+      — paleta/tipografia/pattern sugeridos (vermelho #DC2626, Playfair
+      Display SC, "Waitlist/Coming Soon") descartados; mantida apenas a
+      ESTRUTURA (specs de componente, states, checklist de UX) preenchida
+      com os tokens reais do CLAUDE.md v7 (azul royal, papel, amarelo
+      fosco). Documentado explicitamente no topo do arquivo.
+- [x] Componentes base criados com os tokens: Button, Input, Card, Badge,
+      Toggle, Select — `apps/dashboard/src/components/ui/{Button,Input,
+      Card,Badge,Toggle,Select}.tsx`, usando classes Tailwind mapeadas para
+      os tokens via `tailwind.config.ts` (cores/radius/shadow como
+      `var(--token)`).
+- [x] `globals.css` com todos os tokens do CLAUDE.md — bloco `:root`
+      reescrito com os tokens v7 (royal-blue/paper/matte-yellow/radius/
+      spacing/shadow/motion); tokens legados (`--brand`, `--sidebar-*`,
+      `--text-*`, `--green` etc.) viram aliases para os tokens novos, para
+      não quebrar Sidebar/MetricCard/páginas atuais durante a transição.
+- [x] Fontes Manrope + IBM Plex Mono carregadas (next/font) —
+      `apps/dashboard/src/app/layout.tsx` usa `next/font/google`
+      (`Manrope`, `IBM_Plex_Mono`), confirmado ao vivo:
+      `getComputedStyle(button).fontFamily` → `__Manrope_..., Manrope,
+      sans-serif` em `/dev/ui`.
+- [x] Página de referência `/dev/ui` renderizando todos os componentes
+      (dev-only, não deployada em produção) — `app/dev/ui/page.tsx`,
+      `notFound()` se `NODE_ENV === 'production'`; testada ao vivo via
+      preview local: `GET /dev/ui → 200`, todos os 6 componentes + tela de
+      consentimento presentes na árvore de acessibilidade.
+- [x] Skill ativa nesta task: ui-ux-pro-max (direção). Impeccable não
+      invocada separadamente — o hook de design (`impeccable@1`) já roda
+      automaticamente em todo Write/Edit e não sinalizou problemas. Taste
+      permanece instalada, não invocada (D9).
+- [x] Componente de tela de aceite/consentimento incluído nos base
+      components — `components/ui/ConsentScreen.tsx`, testado ao vivo:
+      botão "Continuar" desabilitado até o checkbox ser marcado
+      (`btn.disabled === true` antes do clique).
+- [x] `tsc --noEmit` passa (0 erros) e `npx vitest run` → 23/23 (nenhum
+      teste novo necessário — tarefa é de UI/tokens, sem lógica de
+      negócio).
 
 ---
 

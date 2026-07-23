@@ -49,7 +49,8 @@ D10 ✅ Fluxo de consentimento (aceite): tela própria pós-OTP, pré-campos
 D11 ✅ Auth do cliente permanece CUSTOM (não Supabase Auth) — 2026-07-23.
       Motivos: WhatsApp OTP grátis vs SMS pago (~R$0,25–0,50/verificação),
       privilégio baixíssimo da sessão do cliente, pools separados evitam
-      complexidade de RLS. Condicionada ao hardening da task 2.0b
+      complexidade de RLS. Condicionada ao hardening da task 2.0b —
+      hardening fechado em 2026-07-23, decisão sem pendências
 ```
 
 ---
@@ -350,25 +351,53 @@ até a Fase 2 reconstruir essas telas — fora do escopo desta tarefa
 
 ---
 
-### 2.0b — Hardening da auth do cliente (addendum ao 0c)
+### 2.0b — Hardening da auth do cliente (addendum ao 0c) ✅ 2026-07-23
 
 **Contexto:** decisão D11 manteve a auth custom, condicionada a fechar
 5 lacunas de segurança identificadas na revisão de 2026-07-23. Deve
 fechar ANTES da spec-023 consumir a infra OTP. Tarefa pequena (1 sessão).
 
 **Critérios de aceite:**
-- [ ] Código OTP salvo como hash em `otp_codes` (nunca texto plano);
-      verificação compara hash
-- [ ] Comparação em tempo constante (`crypto.timingSafeEqual`)
-- [ ] Sliding expiry: validação com última rotação > 24h → rotaciona
-      token da sessão + reemite cookie
-- [ ] Limpeza embutida: inserir novo código/sessão deleta expirados do
-      mesmo telefone/cliente (sem cron)
-- [ ] Regra uid↔sessão: `customer_id` da sessão ≠ `uid` da URL → 403
-      (helper único em `lib/customerSession.ts`, testado)
-- [ ] Multi-dispositivo: N sessões por cliente; logout revoga só a atual
-- [ ] Testes Vitest atualizados cobrindo os 5 itens
-- [ ] `tsc --noEmit` passa
+- [x] Código OTP salvo como hash em `otp_codes` (nunca texto plano);
+      verificação compara hash — `lib/otp/rules.ts`: `hashOtpCode`
+      (SHA-256) + `lib/otp/index.ts` grava `code_hash` em vez de `code`.
+      Migration `supabase/migrations/20260723010000_hardening_customer_auth.sql`
+      renomeia a coluna (idempotente, guardada por `information_schema`)
+      e comenta o novo significado; aplicada ao vivo no projeto de teste
+      (hfqclbihfasnigitxpqj) via `apply_migration` — `get_advisors(security)`
+      sem novos problemas (só os INFO de deny-all já documentados em 0a).
+- [x] Comparação em tempo constante (`crypto.timingSafeEqual`) —
+      `hashesMatch()` em `lib/otp/rules.ts`, usada por
+      `evaluateOtpVerification`.
+- [x] Sliding expiry: validação com última rotação > 24h → rotaciona
+      token da sessão + reemite cookie — `shouldRotateSession()` +
+      `getCustomerSession()` em `lib/customerSession.ts`; nova coluna
+      `customer_sessions.last_rotated_at` (mesma migration).
+- [x] Limpeza embutida: inserir novo código/sessão deleta expirados do
+      mesmo telefone/cliente (sem cron) — `requestOtp()` deleta
+      `otp_codes` expirados do telefone antes de inserir;
+      `createCustomerSession()` deleta `customer_sessions` expiradas do
+      cliente antes de inserir.
+- [x] Regra uid↔sessão: `customer_id` da sessão ≠ `uid` da URL → 403
+      (helper único em `lib/customerSession.ts`, testado) —
+      `requireCustomerForUid(uid)` + `sessionMatchesUid()`, lança
+      `CustomerSessionForbiddenError` em divergência.
+- [x] Multi-dispositivo: N sessões por cliente; logout revoga só a atual —
+      já era o comportamento (`revokeCustomerSession` deleta só pelo
+      `token_hash` do cookie atual); confirmado que a limpeza embutida
+      acima só remove sessões EXPIRADAS do cliente, nunca as válidas de
+      outros aparelhos.
+- [x] Testes Vitest atualizados cobrindo os 5 itens —
+      `lib/otp/rules.test.ts` (hash nunca é o código em claro,
+      determinístico, códigos diferentes → hashes diferentes) +
+      `lib/customerSession.test.ts` (sliding expiry: não rotaciona <24h,
+      rotaciona >24h; uid↔sessão: bate/não bate). `npx vitest run` →
+      `Test Files 4 passed (4)`, `Tests 31 passed (31)` (23 anteriores + 8
+      novos).
+- [x] `tsc --noEmit` passa — 0 erros. API pública de
+      `lib/customerSession.ts`/`lib/otp/*` preservada (mesmos nomes de
+      função exportados); só o formato interno do registro OTP mudou
+      (`code` → `codeHash`), necessário para o próprio hardening.
 
 ---
 

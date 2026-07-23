@@ -4,6 +4,7 @@ import { sendWhatsAppText } from '../whatsapp/evolution';
 import { sendSmsText } from '../sms';
 import {
   generateOtpCode,
+  hashOtpCode,
   otpExpiresAt,
   isRateLimited,
   evaluateOtpVerification,
@@ -35,12 +36,20 @@ export async function requestOtp(rawPhone: string, channel: OtpChannel): Promise
     throw new OtpRateLimitError();
   }
 
+  // Hardening 2.0b — limpeza embutida: sem cron, cada novo código já
+  // remove os códigos expirados deste telefone.
+  await supabase
+    .from('otp_codes')
+    .delete()
+    .eq('phone', phone)
+    .lt('expires_at', new Date().toISOString());
+
   const code = generateOtpCode();
   const expiresAt = otpExpiresAt(new Date());
 
   const { error } = await supabase.from('otp_codes').insert({
     phone,
-    code,
+    code_hash: hashOtpCode(code),
     channel,
     expires_at: expiresAt.toISOString(),
   });
@@ -61,7 +70,7 @@ export async function verifyOtp(rawPhone: string, submittedCode: string): Promis
 
   const { data: record } = await supabase
     .from('otp_codes')
-    .select('id, code, expires_at, attempts, used')
+    .select('id, code_hash, expires_at, attempts, used')
     .eq('phone', phone)
     .eq('used', false)
     .order('created_at', { ascending: false })
@@ -71,7 +80,7 @@ export async function verifyOtp(rawPhone: string, submittedCode: string): Promis
   const result = evaluateOtpVerification(
     record
       ? {
-          code: record.code,
+          codeHash: record.code_hash,
           expiresAt: new Date(record.expires_at),
           attempts: record.attempts,
           used: record.used,

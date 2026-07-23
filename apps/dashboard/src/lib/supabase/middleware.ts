@@ -1,7 +1,9 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/auth/callback'];
+// /dev/ui é a vitrine dos componentes base (task 2.0) — sem dados, 404 em
+// produção (guarda em app/dev/ui/page.tsx) — não precisa de sessão do dono.
+const PUBLIC_PATHS = ['/login', '/auth/callback', '/dev'];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(path => pathname === path || pathname.startsWith(`${path}/`));

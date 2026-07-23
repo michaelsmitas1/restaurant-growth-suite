@@ -1,48 +1,139 @@
 @tailwind base;
+@tailwind components;
 @tailwind utilities;
 
 :root {
-  --brand: #EA1D2C;
-  --brand-light: rgba(234, 29, 44, 0.08);
-  --brand-dark: #b8000e;
+  /* ══════════════════════════════════════════
+     TOKENS REMY — CLAUDE.md v7 (fonte de verdade)
+     Paleta do rebrand: azul royal, papel, amarelo fosco.
+     Nunca hardcoded fora daqui — sempre var(--token).
+  ══════════════════════════════════════════ */
 
-  --sidebar-bg: #ffffff;
-  --sidebar-border: #ebebeb;
-  --sidebar-muted: #9ca3af;
-  --sidebar-hover-bg: #f5f5f5;
-  --sidebar-active-bg: rgba(234, 29, 44, 0.08);
-  --sidebar-active-text: #EA1D2C;
+  /* Brand — Azul Royal */
+  --color-royal-blue: #1B3EA4;
+  --color-royal-blue-hover: #142F7D;
+  --color-royal-blue-soft: #D6E0F5;
+  --color-royal-blue-subtle: #EEF2FB;
 
-  --card-bg: #ffffff;
-  --page-bg: #f7f7f8;
-  --text-primary: #111111;
-  --text-secondary: #6b7280;
-  --text-muted: #9ca3af;
-  --border: #e5e7eb;
-  --border-light: #f3f4f6;
+  /* Ink — derivado do azul, não preto puro */
+  --color-ink: #12224F;
+  --color-ink-hover: #0C1938;
+  --color-ink-soft: #3A4A73;
 
-  --green: #16a34a;
-  --green-light: #f0fdf4;
-  --amber: #d97706;
-  --amber-light: #fffbeb;
-  --red: #dc2626;
-  --red-light: #fef2f2;
-  --blue: #2563eb;
-  --blue-light: #eff6ff;
+  /* Backgrounds — Branco Papel */
+  --color-paper: #FAF9F7;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F5F4F1;
+  --color-surface-selected: #EEF2FB;
 
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
-  --shadow-card: 0 2px 8px 0 rgb(0 0 0 / 0.06), 0 1px 3px -1px rgb(0 0 0 / 0.04);
-  --shadow-md: 0 4px 16px 0 rgb(0 0 0 / 0.08), 0 2px 6px -2px rgb(0 0 0 / 0.05);
+  /* Accent — Amarelo Fosco */
+  --color-matte-yellow: #E1C463;
+  --color-matte-yellow-hover: #CBB050;
+  --color-matte-yellow-soft: #F7EFD6;
+  --color-matte-yellow-subtle: #FBF6E9;
 
-  --font-inter: var(--font-inter-var), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --radius: 14px;
+  /* Text */
+  --color-text-primary: #12224F;
+  --color-text-secondary: #5B6786;
+  --color-text-muted: #8D96AC;
+  --color-text-inverse: #FFFFFF;
+
+  /* Borders — tom quente, combina com paper */
+  --color-border: #E3DFD8;
+  --color-border-strong: #C7C1B6;
+  --color-border-focus: #1B3EA4;
+
+  /* Semantic */
+  --color-info: #1B3EA4;
+  --color-info-soft: #EEF2FB;
+  --color-success: #23895E;
+  --color-success-soft: #E4F4EC;
+  --color-warning: #B8863A;
+  --color-warning-soft: #FBF0DC;
+  --color-error: #C24B4B;
+  --color-error-soft: #FBEAEA;
+
+  /* Celebration — o amarelo fosco é a cor de celebração */
+  --color-celebration: #E1C463;
+  --color-celebration-hover: #CBB050;
+  --color-celebration-soft: #F7EFD6;
+
+  /* Typography */
+  --font-display: var(--font-manrope), "Manrope", sans-serif;
+  --font-body: var(--font-manrope), "Manrope", sans-serif;
+  --font-data: var(--font-plex-mono), "IBM Plex Mono", monospace;
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* Radius */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 999px;
+
+  /* Spacing — grid 8px */
+  --space-1: 4px;  --space-2: 8px;   --space-3: 12px;  --space-4: 16px;
+  --space-5: 20px; --space-6: 24px;  --space-8: 32px;  --space-10: 40px;
+  --space-12: 48px; --space-16: 64px; --space-20: 80px; --space-24: 96px;
+
+  /* Shadows — rgba baseado no ink novo */
+  --shadow-sm: 0 2px 8px rgba(18, 34, 79, 0.05);
+  --shadow-md: 0 8px 24px rgba(18, 34, 79, 0.08);
+  --shadow-lg: 0 18px 48px rgba(18, 34, 79, 0.12);
+
+  /* Motion */
+  --duration-fast: 150ms;
+  --duration-normal: 220ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ══════════════════════════════════════════
+     ALIASES LEGADOS — mantêm Sidebar/MetricCard/
+     páginas atuais funcionando durante a transição.
+     Remover quando essas telas forem reconstruídas
+     na Fase 2 (2.9) sobre os componentes base novos.
+  ══════════════════════════════════════════ */
+  --brand: var(--color-royal-blue);
+  --brand-light: var(--color-royal-blue-subtle);
+  --brand-dark: var(--color-royal-blue-hover);
+
+  --sidebar-bg: var(--color-surface);
+  --sidebar-border: var(--color-border);
+  --sidebar-muted: var(--color-text-muted);
+  --sidebar-hover-bg: var(--color-surface-hover);
+  --sidebar-active-bg: var(--color-royal-blue-subtle);
+  --sidebar-active-text: var(--color-royal-blue);
+
+  --card-bg: var(--color-surface);
+  --page-bg: var(--color-paper);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-muted);
+  --border: var(--color-border);
+  --border-light: var(--color-border);
+
+  --green: var(--color-success);
+  --green-light: var(--color-success-soft);
+  --amber: var(--color-warning);
+  --amber-light: var(--color-warning-soft);
+  --red: var(--color-error);
+  --red-light: var(--color-error-soft);
+  --blue: var(--color-info);
+  --blue-light: var(--color-info-soft);
+
+  --radius: var(--radius-lg);
   --sidebar-w: 232px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: var(--font-inter);
+  font-family: var(--font-body);
   background: var(--page-bg);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
@@ -111,7 +202,7 @@ body {
   font-size: 13.5px;
   color: var(--sidebar-muted);
   font-weight: 450;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
 }
 .nav-link:hover { background: var(--sidebar-hover-bg); color: var(--text-primary); }
 .nav-link.active { background: var(--sidebar-active-bg); color: var(--sidebar-active-text); font-weight: 600; }
@@ -129,13 +220,13 @@ body {
 .card {
   background: var(--card-bg);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-sm);
 }
 .metric-card {
   background: var(--card-bg);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-card);
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--duration-normal) var(--ease-standard), transform var(--duration-normal) var(--ease-standard);
 }
 .metric-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
 
@@ -146,12 +237,12 @@ body {
 .mobile-nav { display: none; }
 
 /* ─── Forms ─── */
-button, input, textarea, select { font-family: var(--font-inter); }
+button, input, textarea, select { font-family: var(--font-body); }
 
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 2px; }
 
 /* ══════════════════════════════════════════
    RESPONSIVE — mobile < 768px
@@ -195,7 +286,7 @@ button, input, textarea, select { font-family: var(--font-inter); }
     position: fixed;
     top: 0; left: 0; right: 0;
     height: 56px;
-    background: #fff;
+    background: var(--color-surface);
     border-bottom: 1px solid var(--border);
     z-index: 100;
     padding: 0 16px;
@@ -209,7 +300,7 @@ button, input, textarea, select { font-family: var(--font-inter); }
     display: flex;
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    background: #fff;
+    background: var(--color-surface);
     border-top: 1px solid var(--border);
     z-index: 100;
     justify-content: space-around;
@@ -229,7 +320,7 @@ button, input, textarea, select { font-family: var(--font-inter); }
     font-weight: 500;
     padding: 8px 4px;
     flex: 1;
-    transition: color 0.1s;
+    transition: color var(--duration-fast) var(--ease-standard);
   }
   .mobile-nav-item.active { color: var(--brand); }
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   generateOtpCode,
+  hashOtpCode,
   otpExpiresAt,
   isOtpExpired,
   isRateLimited,
@@ -68,9 +69,30 @@ describe('tentativas', () => {
   });
 });
 
+describe('hashOtpCode', () => {
+  it('nunca retorna o código em texto plano', () => {
+    const hash = hashOtpCode('123456');
+    expect(hash).not.toBe('123456');
+    expect(hash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('é determinístico para o mesmo código', () => {
+    expect(hashOtpCode('123456')).toBe(hashOtpCode('123456'));
+  });
+
+  it('produz hashes diferentes para códigos diferentes', () => {
+    expect(hashOtpCode('123456')).not.toBe(hashOtpCode('654321'));
+  });
+});
+
 describe('evaluateOtpVerification', () => {
   const now = new Date('2026-07-22T10:00:00Z');
-  const baseRecord = { code: '123456', expiresAt: otpExpiresAt(now), attempts: 0, used: false };
+  const baseRecord = {
+    codeHash: hashOtpCode('123456'),
+    expiresAt: otpExpiresAt(now),
+    attempts: 0,
+    used: false,
+  };
 
   it('rejeita quando não há registro', () => {
     expect(evaluateOtpVerification(null, '123456', now)).toEqual({ ok: false, reason: 'not_found' });
@@ -97,7 +119,7 @@ describe('evaluateOtpVerification', () => {
     ).toEqual({ ok: false, reason: 'too_many_attempts' });
   });
 
-  it('rejeita código incorreto', () => {
+  it('rejeita código incorreto (nunca compara texto plano contra o hash)', () => {
     expect(evaluateOtpVerification(baseRecord, '000000', now)).toEqual({
       ok: false,
       reason: 'invalid_code',

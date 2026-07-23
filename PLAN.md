@@ -1,6 +1,9 @@
-# Remy — PLAN.md v4
-# Gerado em 2026-07-22. Substitui todas as versões anteriores.
+# Remy — PLAN.md v5
+# Gerado em 2026-07-22, atualizado 2026-07-23. Substitui todas as versões anteriores.
 # Reestruturado pós-VERIFY.md: reset limpo aprovado, Fase 0 refeita.
+# v5: análise pós-rebrand — spec-010 criada, criterios de consentimento
+# adicionados à spec-023, skill de design escolhida, decisão de data do
+# reset resolvida.
 
 ---
 
@@ -36,6 +39,18 @@ D5 ✅ OAuth Google de teste revogado; integração por restaurante = spec-024
 D6 ✅ RLS resolvido pelo reset (toda migration nasce com RLS + policies)
 D7 ✅ Rebrand Balcão → Remy (2026-07-22): domínio remy.app.br (produto);
       site institucional (futuro) a definir
+D8 ✅ Paleta visual do rebrand aplicada nos tokens (2026-07-23): azul
+      royal #1B3EA4, papel #FAF9F7, amarelo fosco #E1C463 — CLAUDE.md v6
+      só tinha trocado o nome, tokens antigos ficaram; corrigido em v7
+D9 ✅ Skills de design: ui-ux-pro-max (direção) + Impeccable (polimento).
+      Taste mantida instalada mas inativa nesta fase — redundante
+D10 ✅ Fluxo de consentimento (aceite): tela própria pós-OTP, pré-campos
+      pessoais. Ver CLAUDE.md "Fluxo de consentimento (LGPD)"
+D11 ✅ Auth do cliente permanece CUSTOM (não Supabase Auth) — 2026-07-23.
+      Motivos: WhatsApp OTP grátis vs SMS pago (~R$0,25–0,50/verificação),
+      privilégio baixíssimo da sessão do cliente, pools separados evitam
+      complexidade de RLS. Condicionada ao hardening da task 2.0b —
+      hardening fechado em 2026-07-23, decisão sem pendências
 ```
 
 ---
@@ -282,26 +297,156 @@ até a Fase 2 reconstruir essas telas — fora do escopo desta tarefa
 
 > Ordem por dependência real. Cada spec consome o que a anterior entrega.
 
-### 2.0 Design System — MASTER.md
+### 2.0 Design System — MASTER.md ✅ 2026-07-23
 
 **Contexto:** gerar a fonte de consistência visual antes da primeira tela.
 
 **Critérios de aceite:**
-- [ ] Rodar ui-ux-pro-max: `search.py "restaurant loyalty program dashboard
-      brazilian" --design-system -p "Remy" --persist`
-- [ ] `design-system/MASTER.md` gerado e commitado
-- [ ] MASTER editado: tokens da skill SUBSTITUÍDOS pelos tokens do CLAUDE.md
-      (os do branding vencem sempre)
-- [ ] Componentes base criados com os tokens: Button, Input, Card, Badge,
-      Toggle, Select (em `components/ui/`)
-- [ ] `globals.css` com todos os tokens do CLAUDE.md
-- [ ] Fontes Manrope + IBM Plex Mono carregadas (next/font)
-- [ ] Página de referência `/dev/ui` renderizando todos os componentes
-      (dev-only, não deployada em produção)
+- [x] Rodar ui-ux-pro-max: `search.py "restaurant loyalty program dashboard
+      brazilian" --design-system -p "Remy" --persist` — executado via skill
+      `ui-ux-pro-max:ui-ux-pro-max`, gerou `design-system/remy/MASTER.md`
+      (categoria "Airline", paleta vermelho-mostarda — descartados, ver
+      próximo item).
+- [x] `design-system/MASTER.md` gerado e commitado — movido de
+      `design-system/remy/MASTER.md` para o caminho canônico
+      `design-system/MASTER.md` (CLAUDE.md/PLAN.md não usam sub-pasta por
+      projeto).
+- [x] MASTER editado: tokens da skill SUBSTITUÍDOS pelos tokens do CLAUDE.md
+      — paleta/tipografia/pattern sugeridos (vermelho #DC2626, Playfair
+      Display SC, "Waitlist/Coming Soon") descartados; mantida apenas a
+      ESTRUTURA (specs de componente, states, checklist de UX) preenchida
+      com os tokens reais do CLAUDE.md v7 (azul royal, papel, amarelo
+      fosco). Documentado explicitamente no topo do arquivo.
+- [x] Componentes base criados com os tokens: Button, Input, Card, Badge,
+      Toggle, Select — `apps/dashboard/src/components/ui/{Button,Input,
+      Card,Badge,Toggle,Select}.tsx`, usando classes Tailwind mapeadas para
+      os tokens via `tailwind.config.ts` (cores/radius/shadow como
+      `var(--token)`).
+- [x] `globals.css` com todos os tokens do CLAUDE.md — bloco `:root`
+      reescrito com os tokens v7 (royal-blue/paper/matte-yellow/radius/
+      spacing/shadow/motion); tokens legados (`--brand`, `--sidebar-*`,
+      `--text-*`, `--green` etc.) viram aliases para os tokens novos, para
+      não quebrar Sidebar/MetricCard/páginas atuais durante a transição.
+- [x] Fontes Manrope + IBM Plex Mono carregadas (next/font) —
+      `apps/dashboard/src/app/layout.tsx` usa `next/font/google`
+      (`Manrope`, `IBM_Plex_Mono`), confirmado ao vivo:
+      `getComputedStyle(button).fontFamily` → `__Manrope_..., Manrope,
+      sans-serif` em `/dev/ui`.
+- [x] Página de referência `/dev/ui` renderizando todos os componentes
+      (dev-only, não deployada em produção) — `app/dev/ui/page.tsx`,
+      `notFound()` se `NODE_ENV === 'production'`; testada ao vivo via
+      preview local: `GET /dev/ui → 200`, todos os 6 componentes + tela de
+      consentimento presentes na árvore de acessibilidade.
+- [x] Skill ativa nesta task: ui-ux-pro-max (direção). Impeccable não
+      invocada separadamente — o hook de design (`impeccable@1`) já roda
+      automaticamente em todo Write/Edit e não sinalizou problemas. Taste
+      permanece instalada, não invocada (D9).
+- [x] Componente de tela de aceite/consentimento incluído nos base
+      components — `components/ui/ConsentScreen.tsx`, testado ao vivo:
+      botão "Continuar" desabilitado até o checkbox ser marcado
+      (`btn.disabled === true` antes do clique).
+- [x] `tsc --noEmit` passa (0 erros) e `npx vitest run` → 23/23 (nenhum
+      teste novo necessário — tarefa é de UI/tokens, sem lógica de
+      negócio).
+
+---
+
+### 2.0b — Hardening da auth do cliente (addendum ao 0c) ✅ 2026-07-23
+
+**Contexto:** decisão D11 manteve a auth custom, condicionada a fechar
+5 lacunas de segurança identificadas na revisão de 2026-07-23. Deve
+fechar ANTES da spec-023 consumir a infra OTP. Tarefa pequena (1 sessão).
+
+**Critérios de aceite:**
+- [x] Código OTP salvo como hash em `otp_codes` (nunca texto plano);
+      verificação compara hash — `lib/otp/rules.ts`: `hashOtpCode`
+      (SHA-256) + `lib/otp/index.ts` grava `code_hash` em vez de `code`.
+      Migration `supabase/migrations/20260723010000_hardening_customer_auth.sql`
+      renomeia a coluna (idempotente, guardada por `information_schema`)
+      e comenta o novo significado; aplicada ao vivo no projeto de teste
+      (hfqclbihfasnigitxpqj) via `apply_migration` — `get_advisors(security)`
+      sem novos problemas (só os INFO de deny-all já documentados em 0a).
+- [x] Comparação em tempo constante (`crypto.timingSafeEqual`) —
+      `hashesMatch()` em `lib/otp/rules.ts`, usada por
+      `evaluateOtpVerification`.
+- [x] Sliding expiry: validação com última rotação > 24h → rotaciona
+      token da sessão + reemite cookie — `shouldRotateSession()` +
+      `getCustomerSession()` em `lib/customerSession.ts`; nova coluna
+      `customer_sessions.last_rotated_at` (mesma migration).
+- [x] Limpeza embutida: inserir novo código/sessão deleta expirados do
+      mesmo telefone/cliente (sem cron) — `requestOtp()` deleta
+      `otp_codes` expirados do telefone antes de inserir;
+      `createCustomerSession()` deleta `customer_sessions` expiradas do
+      cliente antes de inserir.
+- [x] Regra uid↔sessão: `customer_id` da sessão ≠ `uid` da URL → 403
+      (helper único em `lib/customerSession.ts`, testado) —
+      `requireCustomerForUid(uid)` + `sessionMatchesUid()`, lança
+      `CustomerSessionForbiddenError` em divergência.
+- [x] Multi-dispositivo: N sessões por cliente; logout revoga só a atual —
+      já era o comportamento (`revokeCustomerSession` deleta só pelo
+      `token_hash` do cookie atual); confirmado que a limpeza embutida
+      acima só remove sessões EXPIRADAS do cliente, nunca as válidas de
+      outros aparelhos.
+- [x] Testes Vitest atualizados cobrindo os 5 itens —
+      `lib/otp/rules.test.ts` (hash nunca é o código em claro,
+      determinístico, códigos diferentes → hashes diferentes) +
+      `lib/customerSession.test.ts` (sliding expiry: não rotaciona <24h,
+      rotaciona >24h; uid↔sessão: bate/não bate). `npx vitest run` →
+      `Test Files 4 passed (4)`, `Tests 31 passed (31)` (23 anteriores + 8
+      novos).
+- [x] `tsc --noEmit` passa — 0 erros. API pública de
+      `lib/customerSession.ts`/`lib/otp/*` preservada (mesmos nomes de
+      função exportados); só o formato interno do registro OTP mudou
+      (`code` → `codeHash`), necessário para o próprio hardening.
+
+---
+
+### 2.0c — Limpeza das páginas legadas quebradas (pré-requisito da spec-010) ✅ 2026-07-23
+
+**Contexto:** as 5 páginas seguintes consultavam tabelas/colunas dropadas
+no reset de 22/07/2026 (`reviews`, `campaigns`, `customers.restaurant_id`,
+`restaurant.stamps_required`/`type`/`tone_of_voice`/`google_refresh_token`)
+e quebravam em runtime (ver notas de 0b/0f). Removidas/redirecionadas
+SEM corrigir a lógica — spec-010/2.9 reconstrói essas telas sobre o
+schema novo.
+
+**Critérios de aceite:**
+- [x] `app/restaurante/[id]/avaliacoes` — conteúdo substituído por
+      `redirect('/')`. Componente `AvaliacaoCard.tsx` e a Server Action
+      `app/actions/reviews.ts` (únicos consumidores, sem outros usos no
+      repo) deletados junto — código morto, não patch.
+- [x] `app/restaurante/[id]/campanhas` — idem, `redirect('/')`.
+- [x] `app/restaurante/[id]/clientes` — idem, `redirect('/')`.
+- [x] `app/restaurante/[id]/configuracoes` — idem, `redirect('/')`.
+- [x] `app/restaurante/[id]/wallet` — idem, `redirect('/')`.
+- [x] `tsc --noEmit` passa — 0 erros. `npx vitest run` → 31/31 (sem
+      regressão).
+- [x] Verificado ao vivo: as 5 rotas não fazem mais nenhuma query a
+      tabela dropada (removida a query inteira, não só corrigida) —
+      confirmado por leitura de cada arquivo pós-edição. Teste end-to-end
+      do redirect em si bloqueado pelo middleware de auth do dono neste
+      ambiente (sem sessão Supabase configurada, mesma limitação já
+      registrada nas tasks 2.0/2.0b) — `next/navigation`'s `redirect()`
+      é a API padrão documentada do Next.js, mesmo padrão já usado em
+      `login/page.tsx` (via `router.push`), risco de regressão baixo.
+
+**Achado fora de escopo (não corrigido nesta tarefa):**
+`app/restaurante/[id]/page.tsx` (a página-índice, NÃO listada no escopo
+desta tarefa) também consulta `reviews`, `campaigns` e
+`customers.restaurant_id` diretamente — está igualmente quebrada em
+runtime pelo mesmo reset. Como não estava no escopo explícito (CLAUDE.md,
+PLAN.md 0b/0f e spec-010 só listam as 5 subrotas acima), foi deixada como
+está. Precisa ser resolvida antes de qualquer demo com usuário real —
+provavelmente junto da spec-010/2.9, que substitui essa tela pela home
+do dashboard novo.
 
 ---
 
 ### spec-010 — Wizard de onboarding (8 passos)
+
+⚠️ **Arquivo criado em 2026-07-23** — `specs/010-onboarding-wizard.md`
+não existia até agora (só o resumo inline abaixo). Commitar antes de
+iniciar a sessão desta spec.
 
 **Por que primeiro:** cria o restaurante e o programa. Sem ele não existe
 nada para o cliente entrar.
@@ -311,18 +456,28 @@ Resumo: 8 passos, preview do card ao vivo (CardPreview compartilhado),
 Google Business via Places API, QRs gerados (PDF impressão), estado persistido,
 mobile-first, < 10 minutos.
 
+**Antes de iniciar, resolver:** as páginas legadas em
+`app/restaurante/[id]/*` quebram em runtime (ver CLAUDE.md, seção de
+banco). Primeira sub-tarefa desta spec: remover ou isolar essas rotas
+(redirect simples) antes de construir o wizard novo por cima.
+
 ---
 
 ### spec-023 — Cadastro do cliente (OTP-first) **[NOVA]**
 
 **Por que segundo:** é a porta de entrada do cliente. Substitui a rota
-`/w/[slug]` da branch abandonada. Consome a infra OTP (0c) e a lib
-Google Wallet (0d).
+`/w/[slug]` da branch abandonada. Consome a infra OTP (0c + hardening
+2.0b — pré-requisito) e a lib Google Wallet (0d).
 
 **Critérios de aceite:**
 - [ ] Rota `[slug]/entrar`: telefone primeiro → OTP → verificado
-- [ ] Campos pós-verificação conforme form_fields_config do restaurante
-- [ ] Consentimento obrigatório
+- [ ] Tela de aceite (consentimento) IMEDIATAMENTE após OTP, ANTES dos
+      campos pessoais — ver fluxo completo em CLAUDE.md
+- [ ] Checkbox de aceite sem pré-marcação; botão "Continuar" desabilitado
+      até marcar; texto do aceite é MASTER, não editável pelo restaurante
+- [ ] Registro: `customer_programs.consent_accepted_at` + `consent_version`
+- [ ] Sem aceite → sem cadastro, sem opção de pular
+- [ ] Campos pós-aceite conforme form_fields_config do restaurante
 - [ ] Deduplicação: telefone existente → login → vincula ao restaurante
       (cria customer_programs, não duplica customers)
 - [ ] Bônus de cadastro creditado
@@ -336,7 +491,7 @@ Google Wallet (0d).
 
 ---
 
-### spec-011 — Remy Rewards (motor)
+### spec-011 — Remy Recompensas (motor)
 
 **Por que terceiro:** o motor que credita selos, avalia milestones e VIP.
 Consome o schema (0a) e é consumido por wallet, scanner e automações.
@@ -467,7 +622,13 @@ automático hoje e gestão de reviews no futuro.
 ```
 [ ] SMS provider (Twilio vs. nacional — Zenvia/TotalVoice) → afeta 0c
 [ ] Google OAuth para login do CLIENTE na Web Wallet → avaliar UX, afeta spec-019
-[ ] Data efetiva do reset do banco → registrar no CLAUDE.md ao executar
+[x] Data efetiva do reset do banco → 22/07/2026, registrado em CLAUDE.md v7
+[ ] Política de Privacidade e Termos de Uso — textos ainda não escritos.
+    Não bloqueia desenvolvimento (spec-023 usa placeholder), mas bloqueia
+    qualquer piloto com cliente real
+[ ] Nome de exibição do WhatsApp Business / perfil verificado, redes
+    sociais @remy, Google Wallet issuer account name no Console — ativos
+    fora do repositório, checklist operacional separado do PLAN.md
 ```
 
 ---

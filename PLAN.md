@@ -1,6 +1,9 @@
-# Remy — PLAN.md v4
-# Gerado em 2026-07-22. Substitui todas as versões anteriores.
+# Remy — PLAN.md v5
+# Gerado em 2026-07-22, atualizado 2026-07-23. Substitui todas as versões anteriores.
 # Reestruturado pós-VERIFY.md: reset limpo aprovado, Fase 0 refeita.
+# v5: análise pós-rebrand — spec-010 criada, criterios de consentimento
+# adicionados à spec-023, skill de design escolhida, decisão de data do
+# reset resolvida.
 
 ---
 
@@ -36,6 +39,17 @@ D5 ✅ OAuth Google de teste revogado; integração por restaurante = spec-024
 D6 ✅ RLS resolvido pelo reset (toda migration nasce com RLS + policies)
 D7 ✅ Rebrand Balcão → Remy (2026-07-22): domínio remy.app.br (produto);
       site institucional (futuro) a definir
+D8 ✅ Paleta visual do rebrand aplicada nos tokens (2026-07-23): azul
+      royal #1B3EA4, papel #FAF9F7, amarelo fosco #E1C463 — CLAUDE.md v6
+      só tinha trocado o nome, tokens antigos ficaram; corrigido em v7
+D9 ✅ Skills de design: ui-ux-pro-max (direção) + Impeccable (polimento).
+      Taste mantida instalada mas inativa nesta fase — redundante
+D10 ✅ Fluxo de consentimento (aceite): tela própria pós-OTP, pré-campos
+      pessoais. Ver CLAUDE.md "Fluxo de consentimento (LGPD)"
+D11 ✅ Auth do cliente permanece CUSTOM (não Supabase Auth) — 2026-07-23.
+      Motivos: WhatsApp OTP grátis vs SMS pago (~R$0,25–0,50/verificação),
+      privilégio baixíssimo da sessão do cliente, pools separados evitam
+      complexidade de RLS. Condicionada ao hardening da task 2.0b
 ```
 
 ---
@@ -298,10 +312,40 @@ até a Fase 2 reconstruir essas telas — fora do escopo desta tarefa
 - [ ] Fontes Manrope + IBM Plex Mono carregadas (next/font)
 - [ ] Página de referência `/dev/ui` renderizando todos os componentes
       (dev-only, não deployada em produção)
+- [ ] Skill ativa nesta task: ui-ux-pro-max (direção) + Impeccable
+      (polimento). Taste permanece instalada, não invocada (D9)
+- [ ] Componente de tela de aceite/consentimento incluído nos base
+      components (reutilizado pela spec-023)
+
+---
+
+### 2.0b — Hardening da auth do cliente (addendum ao 0c)
+
+**Contexto:** decisão D11 manteve a auth custom, condicionada a fechar
+5 lacunas de segurança identificadas na revisão de 2026-07-23. Deve
+fechar ANTES da spec-023 consumir a infra OTP. Tarefa pequena (1 sessão).
+
+**Critérios de aceite:**
+- [ ] Código OTP salvo como hash em `otp_codes` (nunca texto plano);
+      verificação compara hash
+- [ ] Comparação em tempo constante (`crypto.timingSafeEqual`)
+- [ ] Sliding expiry: validação com última rotação > 24h → rotaciona
+      token da sessão + reemite cookie
+- [ ] Limpeza embutida: inserir novo código/sessão deleta expirados do
+      mesmo telefone/cliente (sem cron)
+- [ ] Regra uid↔sessão: `customer_id` da sessão ≠ `uid` da URL → 403
+      (helper único em `lib/customerSession.ts`, testado)
+- [ ] Multi-dispositivo: N sessões por cliente; logout revoga só a atual
+- [ ] Testes Vitest atualizados cobrindo os 5 itens
+- [ ] `tsc --noEmit` passa
 
 ---
 
 ### spec-010 — Wizard de onboarding (8 passos)
+
+⚠️ **Arquivo criado em 2026-07-23** — `specs/010-onboarding-wizard.md`
+não existia até agora (só o resumo inline abaixo). Commitar antes de
+iniciar a sessão desta spec.
 
 **Por que primeiro:** cria o restaurante e o programa. Sem ele não existe
 nada para o cliente entrar.
@@ -311,18 +355,28 @@ Resumo: 8 passos, preview do card ao vivo (CardPreview compartilhado),
 Google Business via Places API, QRs gerados (PDF impressão), estado persistido,
 mobile-first, < 10 minutos.
 
+**Antes de iniciar, resolver:** as páginas legadas em
+`app/restaurante/[id]/*` quebram em runtime (ver CLAUDE.md, seção de
+banco). Primeira sub-tarefa desta spec: remover ou isolar essas rotas
+(redirect simples) antes de construir o wizard novo por cima.
+
 ---
 
 ### spec-023 — Cadastro do cliente (OTP-first) **[NOVA]**
 
 **Por que segundo:** é a porta de entrada do cliente. Substitui a rota
-`/w/[slug]` da branch abandonada. Consome a infra OTP (0c) e a lib
-Google Wallet (0d).
+`/w/[slug]` da branch abandonada. Consome a infra OTP (0c + hardening
+2.0b — pré-requisito) e a lib Google Wallet (0d).
 
 **Critérios de aceite:**
 - [ ] Rota `[slug]/entrar`: telefone primeiro → OTP → verificado
-- [ ] Campos pós-verificação conforme form_fields_config do restaurante
-- [ ] Consentimento obrigatório
+- [ ] Tela de aceite (consentimento) IMEDIATAMENTE após OTP, ANTES dos
+      campos pessoais — ver fluxo completo em CLAUDE.md
+- [ ] Checkbox de aceite sem pré-marcação; botão "Continuar" desabilitado
+      até marcar; texto do aceite é MASTER, não editável pelo restaurante
+- [ ] Registro: `customer_programs.consent_accepted_at` + `consent_version`
+- [ ] Sem aceite → sem cadastro, sem opção de pular
+- [ ] Campos pós-aceite conforme form_fields_config do restaurante
 - [ ] Deduplicação: telefone existente → login → vincula ao restaurante
       (cria customer_programs, não duplica customers)
 - [ ] Bônus de cadastro creditado
@@ -336,7 +390,7 @@ Google Wallet (0d).
 
 ---
 
-### spec-011 — Remy Rewards (motor)
+### spec-011 — Remy Recompensas (motor)
 
 **Por que terceiro:** o motor que credita selos, avalia milestones e VIP.
 Consome o schema (0a) e é consumido por wallet, scanner e automações.
@@ -467,7 +521,13 @@ automático hoje e gestão de reviews no futuro.
 ```
 [ ] SMS provider (Twilio vs. nacional — Zenvia/TotalVoice) → afeta 0c
 [ ] Google OAuth para login do CLIENTE na Web Wallet → avaliar UX, afeta spec-019
-[ ] Data efetiva do reset do banco → registrar no CLAUDE.md ao executar
+[x] Data efetiva do reset do banco → 22/07/2026, registrado em CLAUDE.md v7
+[ ] Política de Privacidade e Termos de Uso — textos ainda não escritos.
+    Não bloqueia desenvolvimento (spec-023 usa placeholder), mas bloqueia
+    qualquer piloto com cliente real
+[ ] Nome de exibição do WhatsApp Business / perfil verificado, redes
+    sociais @remy, Google Wallet issuer account name no Console — ativos
+    fora do repositório, checklist operacional separado do PLAN.md
 ```
 
 ---

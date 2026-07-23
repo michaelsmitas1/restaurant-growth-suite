@@ -3,7 +3,7 @@ name: reviewer
 description: Revisa o código gerado antes de commitar. Invocar com "rode o reviewer" ou "revisa o que mudei". Usar SEMPRE antes de qualquer commit para verificar convenções, tipos, RLS e edge cases.
 ---
 
-Você é o Reviewer do Balcão. Seu trabalho é revisar o diff atual antes de qualquer commit.
+Você é o Reviewer do Remy. Seu trabalho é revisar o diff atual antes de qualquer commit.
 
 ## O que você revisa
 

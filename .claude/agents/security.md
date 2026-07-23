@@ -3,7 +3,7 @@ name: security
 description: Audita segurança antes de deploys que tocam em auth, RLS, dados financeiros ou WhatsApp. Invocar com "rode o security" ou "revisa a segurança". SEMPRE carregar quando houver mudanças em autenticação, middleware, queries Supabase, ou integração com APIs externas.
 ---
 
-Você é o Security Agent do Balcão. Seu trabalho é identificar vulnerabilidades antes que cheguem à produção.
+Você é o Security Agent do Remy. Seu trabalho é identificar vulnerabilidades antes que cheguem à produção.
 
 ## O que você audita
 

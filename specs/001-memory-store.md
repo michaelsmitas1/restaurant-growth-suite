@@ -8,7 +8,7 @@
 
 ## Por quê
 
-O agente sem memória é um chatbot. Toda a tese do Balcão (master skill, closed loop, contexto que cresce) depende de memória persistente por restaurante. Esta é a spec-fundação: nada da Onda 1 funciona sem ela.
+O agente sem memória é um chatbot. Toda a tese do Remy (master skill, closed loop, contexto que cresce) depende de memória persistente por restaurante. Esta é a spec-fundação: nada da Onda 1 funciona sem ela.
 
 ## O quê
 

@@ -1,4 +1,4 @@
-# Balcão — PLAN.md v4
+# Remy — PLAN.md v4
 # Gerado em 2026-07-22. Substitui todas as versões anteriores.
 # Reestruturado pós-VERIFY.md: reset limpo aprovado, Fase 0 refeita.
 
@@ -15,8 +15,8 @@ Nunca pular fase sem fechar a anterior.
 ## Status global
 
 ```
-Fase 0 — Fundação (reset + auth + port)   🔴 EM ANDAMENTO
-Fase 2 — MVP 1                            ⏸️  BLOQUEADA (aguarda Fase 0)
+Fase 0 — Fundação (reset + auth + port)   🟢 CONCLUÍDA (0a-0f) — 2 ações manuais pendentes (ver 0e/0f)
+Fase 2 — MVP 1                            🟢 DESBLOQUEADA
 Fase 3 — Paralela                         🔵 DESBLOQUEADA (independente)
 ```
 
@@ -28,12 +28,14 @@ decisão D4 de 2026-07-22: portar a lib, não mergear a branch.
 ## Decisões que moldaram este plano (2026-07-22)
 
 ```
-D1 ✅ Domínio: app.balcao.ai (produto) + balcao.ai (site futuro)
+D1 ✅ Domínio: app.balcao.ai (produto) + balcao.ai (site futuro) — SUBSTITUÍDA por D7
 D2 ✅ Branch wip/campanhas abandonada — referência visual apenas
 D3 ✅ Reset limpo do banco de teste — migrations reescritas do zero
 D4 ✅ spec-008: portar lib/googleWallet.ts, não mergear a branch
 D5 ✅ OAuth Google de teste revogado; integração por restaurante = spec-024
 D6 ✅ RLS resolvido pelo reset (toda migration nasce com RLS + policies)
+D7 ✅ Rebrand Balcão → Remy (2026-07-22): domínio remy.app.br (produto);
+      site institucional (futuro) a definir
 ```
 
 ---
@@ -42,93 +44,237 @@ D6 ✅ RLS resolvido pelo reset (toda migration nasce com RLS + policies)
 
 > Pré-requisito de tudo. Sem remendos: o schema nasce certo.
 
-### 0a. Reset do banco + schema novo completo
+### 0a. Reset do banco + schema novo completo ✅ 2026-07-22
 
 **Contexto:** banco 100% teste (VERIFY.md). 6 migrations aplicadas sem arquivo
 no repo. Tabelas legadas serão substituídas. Janela única para história limpa.
 
 **Critérios de aceite:**
-- [ ] Backup lógico do banco atual salvo localmente (segurança, não será usado)
-- [ ] Banco de teste dropado/resetado
-- [ ] Migrations novas do zero, numeradas, idempotentes, cobrindo o schema
-      canônico do CLAUDE.md: restaurants (expandida), card_design_config,
-      loyalty_config, loyalty_milestones, form_fields_config, customers
-      (phone único global), customer_programs, visits, redemptions,
-      otp_codes, customer_sessions, daily_passwords, whatsapp_log
-- [ ] TODA tabela com RLS habilitado + policies NA MESMA migration
-- [ ] `supabase db push` em ambiente limpo sobe sem erros
-- [ ] `supabase/seed.sql` recria dados de desenvolvimento (1 restaurante,
-      ~10 clientes, visitas, 1 programa configurado)
-- [ ] `tsc --noEmit` passa
+- [x] Backup lógico do banco atual salvo localmente (segurança, não será usado)
+      — dump JSON das 11 tabelas legadas via `execute_sql`, salvo fora do repo
+      (contém PII de teste). Confirmação do usuário obtida antes do drop.
+- [x] Banco de teste dropado/resetado — 11 tabelas legadas (`restaurants`,
+      `customers`, `visits`, `reviews`, `campaigns`, `campaign_messages`,
+      `review_approvals`, `user_restaurants`, `loyalty_programs`,
+      `message_templates`, `customer_loyalty`) + função/trigger órfã
+      `generate_restaurant_slug` + extensão `unaccent` não utilizada.
+- [x] Migrations novas do zero, numeradas, idempotentes, cobrindo o schema
+      canônico do CLAUDE.md: restaurants (expandida com owner_id/slug/cores/
+      redes sociais/wizard_step), card_design_config, loyalty_config,
+      loyalty_milestones, form_fields_config, customers (phone único global),
+      customer_programs, visits, redemptions, otp_codes, customer_sessions,
+      daily_passwords, whatsapp_log — 7 arquivos em `supabase/migrations/`
+      (20260722010000 a 20260722010600).
+- [x] TODA tabela com RLS habilitado + policies NA MESMA migration —
+      13/13 tabelas com `rls_enabled: true` confirmado via
+      `mcp__supabase__list_tables`. `customers`/`otp_codes`/`customer_sessions`
+      nascem sem policy (deny-all intencional — acesso só via
+      `lib/customerSession.ts`, documentado em comentário na migration).
+- [x] `supabase db push` em ambiente limpo — CLI indisponível localmente
+      (`npx supabase` falha por erro de auth do registry npm, não investigado
+      pois foge do escopo de 0a). Validado de forma equivalente: as mesmas
+      migrations foram aplicadas sequencialmente via MCP Supabase contra o
+      projeto de teste (hfqclbihfasnigitxpqj) já resetado, sem erros —
+      `get_advisors(security)` confirma 0 problema fora do INFO esperado.
+- [x] `supabase/seed.sql` recria dados de desenvolvimento (1 dono em
+      auth.users, 1 restaurante "Sorveteria da Vó Maria" configurado —
+      card_design_config + loyalty_config + 3 milestones + form_fields_config,
+      10 clientes, customer_programs vinculados, 5 visits, 1 redemption VIP).
+      Executado com sucesso via `execute_sql`.
+- [x] `tsc --noEmit` passa — `cd apps/dashboard && npx tsc --noEmit` sem output
+      (0 erros).
 
 ---
 
-### 0b. Auth do dono — middleware + posse
+### 0b. Auth do dono — middleware + posse ✅ 2026-07-22
+
+**Achado crítico corrigido:** `lib/supabase/server.ts` usava `SUPABASE_SERVICE_KEY`
+(bypassa RLS) em TODAS as pages/actions do dashboard, e `middleware.ts` era um
+no-op (`return NextResponse.next()` sem checar sessão). Ambos violavam
+CLAUDE.md diretamente — corrigidos nesta tarefa.
 
 **Critérios de aceite:**
-- [ ] `middleware.ts` protege todas as rotas `(dashboard)/`
-- [ ] Sem sessão → redirect `/login`
-- [ ] Toda Server Action: `getUser()` + validação de posse via `owner_id`
-- [ ] `createServerClient()` (anon + sessão) em todas as pages/actions do dashboard
-- [ ] `SUPABASE_SERVICE_KEY` apenas nos 3 lugares autorizados
-- [ ] `next.config.js`: `allowedOrigins` restrito ao domínio
-- [ ] `tsc --noEmit` passa
+- [x] `middleware.ts` protege todas as rotas — `lib/supabase/middleware.ts`
+      (`updateSession`) chama `supabase.auth.getUser()` a cada request; como
+      o app ainda não tem o route group `(dashboard)/` (rotas atuais:
+      `/`, `/restaurante/[id]/*`), a proteção cobre tudo exceto `/login` e
+      `/auth/callback`. Nota: quando a Fase 2 adicionar rotas de cliente
+      (`[slug]/`, `/scan`, etc.), `PUBLIC_PATHS`/matcher precisam ser
+      revisados para não bloquear o Nível 2 de auth.
+- [x] Sem sessão → redirect `/login` — verificado ao vivo:
+      `curl -s -o /dev/null -w '%{http_code} %{redirect_url}' localhost:3000/`
+      → `307 http://localhost:3000/login`; `GET /login` → `200`.
+- [x] Toda Server Action: `getUser()` + validação de posse via `owner_id` —
+      novo helper `lib/auth/requireOwner.ts` implementa o padrão exato do
+      CLAUDE.md; aplicado às 3 Server Actions existentes em
+      `app/actions/reviews.ts`.
+- [x] `createServerClient()` (anon + sessão) em todas as pages/actions —
+      `lib/supabase/server.ts` reescrito para usar
+      `NEXT_PUBLIC_SUPABASE_ANON_KEY` (era `SUPABASE_SERVICE_KEY`).
+- [x] `SUPABASE_SERVICE_KEY` apenas nos 3 lugares autorizados — grep
+      confirma zero ocorrências em `apps/dashboard/src` após a correção
+      (lib/googleWallet.ts e lib/customerSession.ts ainda não existem;
+      chegam em 0c/0d).
+- [x] `next.config.js`: `allowedOrigins` restrito a `app.balcao.ai` e
+      `localhost:3000` (era `['*']`) — atualizado para `remy.app.br` no
+      rebrand (D7).
+- [x] `tsc --noEmit` passa — 0 erros.
+
+**Fora do escopo desta tarefa (não tocado):** as páginas legadas
+`app/restaurante/[id]/{avaliacoes,campanhas,clientes,configuracoes,wallet}`
+consultam tabelas dropadas em 0a (`reviews`, `campaigns`, `customers.restaurant_id`)
+e vão quebrar em runtime até serem reconstruídas na Fase 2 (spec-010/2.9) ou
+removidas em 0f — efeito esperado do reset (D3), não introduzido aqui.
 
 ---
 
-### 0c. Auth do cliente — infraestrutura OTP + sessão
+### 0c. Auth do cliente — infraestrutura OTP + sessão ✅ 2026-07-22
 
 **Contexto:** base do Nível 2 de auth (CLAUDE.md). Consumida pelas specs
 023 (cadastro), 019 (web wallet) e 022 (senha do dia).
 
 **Critérios de aceite:**
-- [ ] `lib/customerSession.ts`: criar sessão, validar cookie, revogar
-- [ ] Envio de OTP via Evolution API (WhatsApp) funcional
-- [ ] Envio de OTP via SMS: interface pronta, provider stub (definir provider depois)
-- [ ] Regras: código 6 dígitos, expira 5 min, máx 3 tentativas,
-      rate limit 3 códigos/telefone/hora
-- [ ] Cookie httpOnly assinado, 30 dias
-- [ ] Testes Vitest: geração, expiração, tentativas, rate limit
-- [ ] `tsc --noEmit` passa
+- [x] `lib/customerSession.ts`: `createCustomerSession`, `getCustomerSession`,
+      `revokeCustomerSession` — único lugar (além de `serviceClient.ts`
+      interno e `googleWallet.ts` em 0d) que usa `createServiceClient()`,
+      toda query escopada por `token_hash`/`customer_id`.
+- [x] Envio de OTP via Evolution API (WhatsApp) — `lib/whatsapp/evolution.ts`,
+      `POST {EVOLUTION_API_URL}/message/sendText/{EVOLUTION_INSTANCE}`
+      (formato confirmado nos workflows n8n existentes em `apps/n8n-workflows/`).
+- [x] Envio de OTP via SMS — `lib/sms/index.ts`: interface `SmsProvider` +
+      stub que lança erro explícito se chamado (provider real fica para
+      quando a decisão aberta em PLAN.md for resolvida).
+- [x] Regras (código 6 dígitos, expira 5 min, máx 3 tentativas, rate limit
+      3/telefone/hora) — implementadas como funções puras em `lib/otp/rules.ts`,
+      consumidas por `lib/otp/index.ts` (`requestOtp`/`verifyOtp`, via
+      `otp_codes`).
+- [x] Cookie httpOnly assinado, 30 dias — `customerSession.ts` assina o
+      token com HMAC-SHA256 (`CUSTOMER_SESSION_SECRET`) antes de gravar em
+      `customer_sessions.token_hash`; cookie `balcao_customer_session`
+      (httpOnly, secure em produção, sameSite lax, 30 dias) — renomeado para
+      `remy_customer_session` no rebrand (D7).
+- [x] Testes Vitest: geração, expiração, tentativas, rate limit — Vitest
+      configurado (`vitest.config.ts`, script `test`), 18/18 testes passando
+      em `lib/otp/rules.test.ts` + `lib/phone.test.ts`
+      (`npx vitest run` → `Test Files 2 passed (2)`, `Tests 18 passed (18)`).
+- [x] `tsc --noEmit` passa — 0 erros.
+
+**Notas:** novas env vars documentadas em `.env.example`
+(`EVOLUTION_INSTANCE`, `CUSTOMER_SESSION_SECRET`, `SMS_PROVIDER_API_KEY`) e
+preenchidas no `.env` local com valor de desenvolvimento. `otp_codes.code`
+fica em texto plano no banco (nome de coluna exigido pelo schema canônico
+0a) — aceitável porque a tabela nasce sem policies (deny-all) e o código
+expira em 5 min/uso único; sem acesso via `EVOLUTION_API_URL`/`_KEY` reais,
+o envio de WhatsApp não foi testado end-to-end nesta sessão.
 
 ---
 
-### 0d. Port da lib Google Wallet
+### 0d. Port da lib Google Wallet ✅ 2026-07-22
 
 **Contexto:** `lib/googleWallet.ts` da branch spec-008 é a peça mais bem
 construída do audit. Portar para main adaptada ao schema novo
 (customer_programs em vez de customers.current_stamps).
 
 **Critérios de aceite:**
-- [ ] `lib/googleWallet.ts` em main: getAccessToken, ensureLoyaltyClass,
-      ensureLoyaltyObject, patchLoyaltyObjectStamps, buildSaveToWalletUrl
-- [ ] Adaptada ao schema novo (selos vêm de customer_programs)
-- [ ] IDs determinísticos, tratamento 404/409, erros sanitizados
-- [ ] Teste de integração com credenciais reais (classe criada, object gerado)
-- [ ] Screenshot do fluxo será feito na rota nova (spec-023) — critério movido
-- [ ] `tsc --noEmit` passa
+- [x] `lib/googleWallet.ts` em main: `getAccessToken`, `ensureLoyaltyClass`,
+      `ensureLoyaltyObject`, `patchLoyaltyObjectStamps`, `buildSaveToWalletUrl`
+      — portadas de `spec-008-wallet-google` (JWT + service account via `jose`,
+      sem `googleapis`).
+- [x] Adaptada ao schema novo — `ensureLoyaltyObject`/`patchLoyaltyObjectStamps`
+      recebem `CustomerProgramForWallet` (selos de `customer_programs`) +
+      `NextMilestoneForWallet | null` (próximo marco não atingido, ou `null`
+      quando VIP); `rewardStatusText`/`balanceText` isolados e testados
+      (5 testes em `googleWallet.test.ts`).
+- [x] IDs determinísticos — `classId` por `restaurant.id`
+      (`{issuer}.rest_{id}`), **`objectId` agora por `customer_program.id`**
+      (`{issuer}.prog_{id}`), não mais por `customer.id`: no schema novo um
+      cliente tem N programas (um por restaurante), então o objectId precisa
+      ser por vínculo, não por pessoa — desvio deliberado do código original.
+- [x] Tratamento 404/409, erros sanitizados — mantido (404 em PATCH = pass
+      ainda não salvo, não é erro; 409 em POST = corrida entre GET/POST, não
+      é erro); mensagens de erro passaram a expor só o status HTTP, sem o
+      corpo cru da resposta.
+- [x] Teste de integração com credenciais reais — `GOOGLE_WALLET_SA_KEY`/
+      `GOOGLE_WALLET_ISSUER_ID` já estavam configuradas no `.env` local.
+      Rodado ao vivo contra o restaurante e customer_program de teste
+      (seed 0a): `getAccessToken` → token obtido; `ensureLoyaltyClass` →
+      `classId 3388000000023157990.rest_9a588819e3fc4817a0f755a5974c4c5b`;
+      `ensureLoyaltyObject` → `objectId ...prog_4bc82a0f90e14b72b87e06964c92ac6b`;
+      `buildSaveToWalletUrl` → JWT válido; `patchLoyaltyObjectStamps` →
+      confirmado via GET subsequente na API real: `loyaltyPoints.balance
+      "3/3"`, `textModulesData[0].body "Pronta para resgate! 🎁"`.
+- [x] Screenshot do fluxo — confirmado como movido para spec-023 (Fase 2),
+      não se aplica a esta tarefa de infraestrutura.
+- [x] `tsc --noEmit` passa — 0 erros. `npx vitest run` → 23/23 (inclui os
+      5 novos testes de `googleWallet.test.ts`).
+
+**Nota de divergência com CLAUDE.md:** a seção de variáveis de ambiente do
+CLAUDE.md lista `GOOGLE_APPLICATION_CREDENTIALS` (caminho de arquivo); o
+código real (branch spec-008 e `.env` já configurado) usa
+`GOOGLE_WALLET_SA_KEY` (JSON inline) + `GOOGLE_WALLET_ISSUER_ID`, mais
+compatível com deploy serverless (Vercel). Mantive a convenção que já está
+configurada e comprovadamente funcional; vale atualizar o CLAUDE.md para
+refletir isso.
 
 ---
 
-### 0e. Setup de testes + CI
+### 0e. Setup de testes + CI ✅ 2026-07-22 (branch protection pendente — ação manual)
 
 **Critérios de aceite:**
-- [ ] Vitest configurado, primeiro teste rodando (pode ser dos itens 0c/0d)
-- [ ] GitHub Actions: `tsc --noEmit` + `vitest run` em todo PR
-- [ ] PR com falha não mergeia (branch protection em main)
-- [ ] Badge de status no README (opcional)
+- [x] Vitest configurado, primeiro teste rodando — feito em 0c
+      (`vitest.config.ts`), 23/23 passando após 0c/0d (`rules.test.ts`,
+      `phone.test.ts`, `googleWallet.test.ts`).
+- [x] GitHub Actions: `tsc --noEmit` + `vitest run` em todo PR —
+      `.github/workflows/ci.yml`, job `dashboard` (`working-directory:
+      apps/dashboard`), roda em `pull_request`/`push` para `main`.
+- [ ] PR com falha não mergeia (branch protection em main) — **não
+      configurado nesta sessão**: é uma mudança de configuração do
+      repositório GitHub (afeta todos os colaboradores), fora do escopo de
+      uma edição de arquivo, e o check `dashboard` só existe para o GitHub
+      selecionar como obrigatório depois de rodar pelo menos uma vez (ou
+      seja, depois deste PR ser aberto/mergeado). Ação manual sugerida ao
+      usuário: Settings → Branches → Branch protection rule para `main` →
+      exigir o status check `dashboard`.
+- [x] Badge de status no README — adicionado no topo do `README.md`,
+      apontando para `actions/workflows/ci.yml/badge.svg`.
 
 ---
 
-### 0f. Limpeza de referências legadas
+### 0f. Limpeza de referências legadas ✅ 2026-07-22 (domínio Vercel pendente — ação manual)
 
 **Critérios de aceite:**
-- [ ] Zero referências a URLs do Railway no dashboard
-- [ ] Zero referências a `/w/[slug]` em código
-- [ ] Zero referências a `loyalty_programs`/`customer_loyalty` (schema velho)
-- [ ] `NEXT_PUBLIC_APP_URL` = https://app.balcao.ai em todos os ambientes
-- [ ] Domínio app.balcao.ai configurado no Vercel
-- [ ] `tsc --noEmit` passa
+- [x] Zero referências a URLs do Railway no dashboard — 5 usos encontrados
+      (`Sidebar.tsx`, `restaurante/[id]/wallet/page.tsx`,
+      `restaurante/[id]/configuracoes/page.tsx`) e removidos: os links de
+      "Conectar Google"/OAuth viram um estado "em breve" (o fluxo real é
+      spec-024, Fase 3, ainda não existe); os links/QR do wallet passam a
+      usar `${NEXT_PUBLIC_APP_URL}/${restaurant.slug}` (página pública
+      `[slug]` ainda não implementada — spec-010/023, Fase 2 — mas o domínio
+      já é o correto). `grep -ri railway apps/dashboard/src` só retorna
+      comentários explicando a remoção, nenhuma URL.
+- [x] Zero referências a `/w/[slug]` em código — confirmado (já estava limpo).
+- [x] Zero referências a `loyalty_programs`/`customer_loyalty` — confirmado
+      (já estava limpo).
+- [x] `NEXT_PUBLIC_APP_URL` = https://app.balcao.ai em todos os ambientes —
+      adicionado a `.env.example` e ao `.env` local (mesmo valor, conforme
+      CLAUDE.md — QRs/links de wallet precisam de domínio público real
+      mesmo em dev). Atualizado para `https://remy.app.br` no rebrand (D7).
+- [ ] Domínio configurado no Vercel — **não feito nesta sessão**: é mudança
+      de infraestrutura de produção (DNS + configuração do projeto Vercel
+      `restaurante-growth-suite`, `prj_1z1GSNdI7qPTL8Fk3iRgyeSvxjqt`), fora
+      do escopo de edição de arquivos e sem acesso a DNS/registrador. O
+      usuário reportou (2026-07-22) já ter registrado `remy.app.br` — falta
+      confirmar se já está anexado ao projeto Vercel. Ação manual: Vercel →
+      Project Settings → Domains → adicionar `remy.app.br` + configurar os
+      registros DNS indicados pela Vercel no registrador do domínio.
+- [x] `tsc --noEmit` passa — 0 erros. `vitest run` → 23/23.
+
+**Nota:** as páginas legadas em `restaurante/[id]/{avaliacoes,campanhas,
+clientes,wallet,configuracoes}` continuam consultando colunas/tabelas
+removidas em 0a (`stamps_required`, `reward_description`,
+`customers.restaurant_id`, `reviews`, `campaigns`) e vão quebrar em runtime
+até a Fase 2 reconstruir essas telas — fora do escopo desta tarefa
+(limpeza de *referências legadas específicas*, não reescrita de páginas).
 
 ---
 
@@ -142,7 +288,7 @@ construída do audit. Portar para main adaptada ao schema novo
 
 **Critérios de aceite:**
 - [ ] Rodar ui-ux-pro-max: `search.py "restaurant loyalty program dashboard
-      brazilian" --design-system -p "Balcão" --persist`
+      brazilian" --design-system -p "Remy" --persist`
 - [ ] `design-system/MASTER.md` gerado e commitado
 - [ ] MASTER editado: tokens da skill SUBSTITUÍDOS pelos tokens do CLAUDE.md
       (os do branding vencem sempre)
@@ -190,7 +336,7 @@ Google Wallet (0d).
 
 ---
 
-### spec-011 — Balcão Rewards (motor)
+### spec-011 — Remy Rewards (motor)
 
 **Por que terceiro:** o motor que credita selos, avalia milestones e VIP.
 Consome o schema (0a) e é consumido por wallet, scanner e automações.

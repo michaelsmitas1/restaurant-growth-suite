@@ -8,7 +8,7 @@
 
 ## Por quê
 
-Padrão Okara aplicado ao Balcão: pedir só o mínimo (nome + link) e o agente descobre o resto. Cada campo de formulário eliminado é fricção a menos no momento mais frágil da conversão.
+Padrão Okara aplicado ao Remy: pedir só o mínimo (nome + link) e o agente descobre o resto. Cada campo de formulário eliminado é fricção a menos no momento mais frágil da conversão.
 
 ## O quê
 

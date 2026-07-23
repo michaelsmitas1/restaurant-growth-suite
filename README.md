@@ -1,5 +1,7 @@
 # 🍽️ Restaurante Growth Suite — MVP
 
+[![CI](https://github.com/michaelsmitas1/restaurant-growth-suite/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelsmitas1/restaurant-growth-suite/actions/workflows/ci.yml)
+
 Suite de crescimento automático para restaurantes presenciais brasileiros.
 **Zero operação pelo dono. Tudo roda sozinho.**
 

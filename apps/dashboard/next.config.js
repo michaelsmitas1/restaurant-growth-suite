@@ -3,7 +3,7 @@ const nextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: [
-        'app.balcao.ai',
+        'remy.app.br',
         'localhost:3000',
       ],
     },

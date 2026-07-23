@@ -1,13 +1,13 @@
 /**
  * Envio de texto via Evolution API (WhatsApp), usado pelo OTP e pelas
- * automações (spec-004). Instância compartilhada do Balcão — não é a
+ * automações (spec-004). Instância compartilhada do Remy — não é a
  * instância do restaurante (essa é usada nas automações de cada restaurante,
  * via n8n).
  */
 export async function sendWhatsAppText(phone: string, text: string): Promise<void> {
   const apiUrl = process.env.EVOLUTION_API_URL;
   const apiKey = process.env.EVOLUTION_API_KEY;
-  const instance = process.env.EVOLUTION_INSTANCE ?? 'balcao';
+  const instance = process.env.EVOLUTION_INSTANCE ?? 'remy';
 
   if (!apiUrl || !apiKey) {
     throw new Error('EVOLUTION_API_URL/EVOLUTION_API_KEY não configurados');

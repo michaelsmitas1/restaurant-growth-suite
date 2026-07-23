@@ -8,7 +8,7 @@ import { createServiceClient } from './supabase/serviceClient';
  * createServiceClient() — toda query aqui é escopada ao customer_id validado.
  */
 
-const COOKIE_NAME = 'balcao_customer_session';
+const COOKIE_NAME = 'remy_customer_session';
 const SESSION_DURATION_DAYS = 30;
 
 function sign(token: string): string {

@@ -1,11 +1,11 @@
-# Balcão — CLAUDE.md v5
+# Remy — CLAUDE.md v6
 # Gerado em 2026-07-22. Substitui todas as versões anteriores.
 # Fonte de verdade para arquitetura, design e regras de desenvolvimento.
-# Contexto: pós-VERIFY.md — reset limpo de schema aprovado, branch wip abandonada.
+# Contexto: rebrand Balcão → Remy (domínio remy.app.br), pós-Fase 0 (fundação).
 
 ---
 
-## O que é o Balcão
+## O que é o Remy
 
 Plataforma de relacionamento para food businesses brasileiros.
 Primeiro produto: Loyalty — programa de fidelidade digital.
@@ -23,17 +23,17 @@ Tudo pelo celular. Zero dependência de funcionário.
 
 ## Domínio e URLs
 
-Produto: **app.balcao.ai** — Site institucional (futuro): balcao.ai
+Produto: **remy.app.br** — Site institucional (futuro): a definir
 
 ```
-app.balcao.ai/[restaurant-slug]              Página pública do restaurante
-app.balcao.ai/[restaurant-slug]/entrar       Cadastro do cliente (OTP-first)
-app.balcao.ai/[restaurant-slug]/u/[uid]      Web Wallet do cliente
-app.balcao.ai/[restaurant-slug]/display      QR rotativo (tablet do caixa)
-app.balcao.ai/meus-lugares                   Portal do cliente (todos os restaurantes)
-app.balcao.ai/scan                           Scanner do caixa
-app.balcao.ai/login                          Login do dono
-app.balcao.ai/(dashboard)/...                Dashboard do dono (protegido)
+remy.app.br/[restaurant-slug]              Página pública do restaurante
+remy.app.br/[restaurant-slug]/entrar       Cadastro do cliente (OTP-first)
+remy.app.br/[restaurant-slug]/u/[uid]      Web Wallet do cliente
+remy.app.br/[restaurant-slug]/display      QR rotativo (tablet do caixa)
+remy.app.br/meus-lugares                   Portal do cliente (todos os restaurantes)
+remy.app.br/scan                           Scanner do caixa
+remy.app.br/login                          Login do dono
+remy.app.br/(dashboard)/...                Dashboard do dono (protegido)
 ```
 
 Todo QR aponta para essas URLs. Nunca para Railway. Nunca para rotas legadas (`/w/[slug]` não existe mais).
@@ -156,7 +156,7 @@ N programas.
 
 ## Produto — MVP 1 (escopo ativo)
 
-### Programa — Balcão Rewards
+### Programa — Remy Rewards
 - Acúmulo: por visita (X selos) OU por valor (R$X = 1 selo, caixa digita)
 - Milestones: até 3 marcos (selos + recompensa). Primeiro marco recomendado: 3ª visita
 - Pós-último marco: VIP permanente surpresa (badge no card, sem config do dono)
@@ -238,12 +238,12 @@ Dono sai com QR ativo em < 10 minutos.
 ### Personalidade
 Simples. Inteligente. Próximo. Otimista. Confiável.
 Nunca: burocrático, infantil, frio, exagerado, corporativo.
-Regra principal: o restaurante é o protagonista. O Balcão é infraestrutura.
+Regra principal: o restaurante é o protagonista. O Remy é infraestrutura.
 
 ### Fonte de verdade visual
 1. Tokens abaixo (definidos pelo branding — NÃO substituir pelos da skill)
 2. `design-system/MASTER.md` — gerado pela ui-ux-pro-max na Fase 2, editado
-   para usar os tokens do Balcão
+   para usar os tokens do Remy
 3. `design-system/pages/[nome].md` — overrides por página
 
 ### Design Tokens
@@ -384,7 +384,7 @@ Evitar: sinergia, alavancar, ecossistema, transformação digital, disruptivo, o
 - [ ] Toda migration com RLS + policies
 - [ ] Zod em toda entrada externa
 - [ ] Nenhum segredo em código
-- [ ] QRs apontam para app.balcao.ai
+- [ ] QRs apontam para remy.app.br
 - [ ] `tsc --noEmit` e testes passam
 
 ---
@@ -418,5 +418,5 @@ SMS_PROVIDER_API_KEY=            # a definir
 CUSTOMER_SESSION_SECRET=         # assinatura de sessões do cliente
 ROTATING_QR_SECRET=              # HMAC do QR rotativo
 ANTHROPIC_API_KEY=
-NEXT_PUBLIC_APP_URL=https://app.balcao.ai
+NEXT_PUBLIC_APP_URL=https://remy.app.br
 ```

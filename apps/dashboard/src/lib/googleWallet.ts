@@ -149,7 +149,7 @@ export async function ensureLoyaltyClass(restaurant: RestaurantForWallet): Promi
       },
       reviewStatus: 'UNDER_REVIEW',
       rewardsTier: 'Fidelidade',
-      rewardsTierLabel: 'Balcão Rewards',
+      rewardsTierLabel: 'Remy Rewards',
     }),
   });
   // 409 = criado por uma chamada concorrente entre o GET e este POST — não é erro.

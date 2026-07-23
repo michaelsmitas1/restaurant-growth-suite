@@ -2,7 +2,7 @@
 -- 1 dono (auth.users), 1 restaurante configurado, ~10 clientes com visitas.
 -- Nunca rodar contra produção.
 
--- dono de teste (senha: balcao123)
+-- dono de teste (senha: remy123)
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
   email_confirmed_at, recovery_sent_at, last_sign_in_at,
@@ -13,8 +13,8 @@ insert into auth.users (
   'd45e4cb3-13b7-4aa7-ac3a-070a878a94a3',
   'authenticated',
   'authenticated',
-  'dono@balcao.dev',
-  crypt('balcao123', gen_salt('bf')),
+  'dono@remy.dev',
+  crypt('remy123', gen_salt('bf')),
   now(), now(), now(),
   '{"provider":"email","providers":["email"]}',
   '{}',
@@ -48,7 +48,7 @@ on conflict (id) do nothing;
 
 -- design do card
 insert into public.card_design_config (restaurant_id, program_name, background_color, text_color, barcode_type)
-values ('9a588819-e3fc-4817-a0f7-55a5974c4c5b', 'Balcão Rewards', '#10244A', '#FFFFFF', 'qr')
+values ('9a588819-e3fc-4817-a0f7-55a5974c4c5b', 'Remy Rewards', '#10244A', '#FFFFFF', 'qr')
 on conflict (restaurant_id) do nothing;
 
 -- configuração do programa

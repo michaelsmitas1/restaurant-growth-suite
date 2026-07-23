@@ -46,7 +46,7 @@ export async function requestOtp(rawPhone: string, channel: OtpChannel): Promise
   });
   if (error) throw new Error(`Falha ao gerar OTP: ${error.message}`);
 
-  const message = `Seu código Balcão é ${code}. Válido por ${OTP_EXPIRY_MINUTES} minutos.`;
+  const message = `Seu código Remy é ${code}. Válido por ${OTP_EXPIRY_MINUTES} minutos.`;
   if (channel === 'whatsapp') {
     await sendWhatsAppText(phone, message);
   } else {

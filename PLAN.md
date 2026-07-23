@@ -1,4 +1,4 @@
-# Balcão — PLAN.md v4
+# Remy — PLAN.md v4
 # Gerado em 2026-07-22. Substitui todas as versões anteriores.
 # Reestruturado pós-VERIFY.md: reset limpo aprovado, Fase 0 refeita.
 
@@ -28,12 +28,14 @@ decisão D4 de 2026-07-22: portar a lib, não mergear a branch.
 ## Decisões que moldaram este plano (2026-07-22)
 
 ```
-D1 ✅ Domínio: app.balcao.ai (produto) + balcao.ai (site futuro)
+D1 ✅ Domínio: app.balcao.ai (produto) + balcao.ai (site futuro) — SUBSTITUÍDA por D7
 D2 ✅ Branch wip/campanhas abandonada — referência visual apenas
 D3 ✅ Reset limpo do banco de teste — migrations reescritas do zero
 D4 ✅ spec-008: portar lib/googleWallet.ts, não mergear a branch
 D5 ✅ OAuth Google de teste revogado; integração por restaurante = spec-024
 D6 ✅ RLS resolvido pelo reset (toda migration nasce com RLS + policies)
+D7 ✅ Rebrand Balcão → Remy (2026-07-22): domínio remy.app.br (produto);
+      site institucional (futuro) a definir
 ```
 
 ---
@@ -114,7 +116,8 @@ CLAUDE.md diretamente — corrigidos nesta tarefa.
       (lib/googleWallet.ts e lib/customerSession.ts ainda não existem;
       chegam em 0c/0d).
 - [x] `next.config.js`: `allowedOrigins` restrito a `app.balcao.ai` e
-      `localhost:3000` (era `['*']`).
+      `localhost:3000` (era `['*']`) — atualizado para `remy.app.br` no
+      rebrand (D7).
 - [x] `tsc --noEmit` passa — 0 erros.
 
 **Fora do escopo desta tarefa (não tocado):** as páginas legadas
@@ -148,7 +151,8 @@ removidas em 0f — efeito esperado do reset (D3), não introduzido aqui.
 - [x] Cookie httpOnly assinado, 30 dias — `customerSession.ts` assina o
       token com HMAC-SHA256 (`CUSTOMER_SESSION_SECRET`) antes de gravar em
       `customer_sessions.token_hash`; cookie `balcao_customer_session`
-      (httpOnly, secure em produção, sameSite lax, 30 dias).
+      (httpOnly, secure em produção, sameSite lax, 30 dias) — renomeado para
+      `remy_customer_session` no rebrand (D7).
 - [x] Testes Vitest: geração, expiração, tentativas, rate limit — Vitest
       configurado (`vitest.config.ts`, script `test`), 18/18 testes passando
       em `lib/otp/rules.test.ts` + `lib/phone.test.ts`
@@ -254,14 +258,15 @@ refletir isso.
 - [x] `NEXT_PUBLIC_APP_URL` = https://app.balcao.ai em todos os ambientes —
       adicionado a `.env.example` e ao `.env` local (mesmo valor, conforme
       CLAUDE.md — QRs/links de wallet precisam de domínio público real
-      mesmo em dev).
-- [ ] Domínio app.balcao.ai configurado no Vercel — **não feito nesta
-      sessão**: é mudança de infraestrutura de produção (DNS + configuração
-      do projeto Vercel `restaurante-growth-suite`,
-      `prj_1z1GSNdI7qPTL8Fk3iRgyeSvxjqt`), fora do escopo de edição de
-      arquivos e sem acesso a DNS/registrador. Ação manual: Vercel →
-      Project Settings → Domains → adicionar `app.balcao.ai` + configurar
-      os registros DNS indicados pela Vercel no registrador do domínio.
+      mesmo em dev). Atualizado para `https://remy.app.br` no rebrand (D7).
+- [ ] Domínio configurado no Vercel — **não feito nesta sessão**: é mudança
+      de infraestrutura de produção (DNS + configuração do projeto Vercel
+      `restaurante-growth-suite`, `prj_1z1GSNdI7qPTL8Fk3iRgyeSvxjqt`), fora
+      do escopo de edição de arquivos e sem acesso a DNS/registrador. O
+      usuário reportou (2026-07-22) já ter registrado `remy.app.br` — falta
+      confirmar se já está anexado ao projeto Vercel. Ação manual: Vercel →
+      Project Settings → Domains → adicionar `remy.app.br` + configurar os
+      registros DNS indicados pela Vercel no registrador do domínio.
 - [x] `tsc --noEmit` passa — 0 erros. `vitest run` → 23/23.
 
 **Nota:** as páginas legadas em `restaurante/[id]/{avaliacoes,campanhas,
@@ -283,7 +288,7 @@ até a Fase 2 reconstruir essas telas — fora do escopo desta tarefa
 
 **Critérios de aceite:**
 - [ ] Rodar ui-ux-pro-max: `search.py "restaurant loyalty program dashboard
-      brazilian" --design-system -p "Balcão" --persist`
+      brazilian" --design-system -p "Remy" --persist`
 - [ ] `design-system/MASTER.md` gerado e commitado
 - [ ] MASTER editado: tokens da skill SUBSTITUÍDOS pelos tokens do CLAUDE.md
       (os do branding vencem sempre)
@@ -331,7 +336,7 @@ Google Wallet (0d).
 
 ---
 
-### spec-011 — Balcão Rewards (motor)
+### spec-011 — Remy Rewards (motor)
 
 **Por que terceiro:** o motor que credita selos, avalia milestones e VIP.
 Consome o schema (0a) e é consumido por wallet, scanner e automações.

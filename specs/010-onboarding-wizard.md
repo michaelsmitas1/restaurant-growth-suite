@@ -8,11 +8,18 @@
 
 ## Pré-requisito antes de iniciar
 
-As páginas legadas em `app/restaurante/[id]/{avaliacoes,campanhas,clientes,
-configuracoes,wallet}` consultam tabelas dropadas no reset de 22/07/2026
-e quebram em runtime. Antes do Passo 1 desta spec: remover essas rotas ou
-substituir por um redirect simples para o dashboard novo. Não corrigir
-com patches — elas serão substituídas pelo wizard e pelo dashboard 2.9.
+✅ Fechado em 2026-07-23 (PLAN.md, task 2.0c). As páginas legadas em
+`app/restaurante/[id]/{avaliacoes,campanhas,clientes,configuracoes,wallet}`
+consultavam tabelas dropadas no reset de 22/07/2026 e quebravam em
+runtime — viraram `redirect('/')`, sem patch (serão substituídas pelo
+wizard e pelo dashboard 2.9).
+
+⚠️ Achado durante a limpeza, fora do escopo listado acima:
+`app/restaurante/[id]/page.tsx` (a página-índice) também quebra em
+runtime pelo mesmo motivo (`reviews`, `campaigns`,
+`customers.restaurant_id`) e não foi tocada. Resolver antes do Passo 1
+desta spec ou como parte dela — provavelmente substituída pela mesma
+tela que o wizard/dashboard 2.9 vão introduzir.
 
 ---
 
@@ -273,7 +280,10 @@ de escrever qualquer migration nova — não duplicar o que já existe.
 
 ## Critérios de aceite completos
 
-- [ ] Páginas legadas quebradas removidas ou redirecionadas (pré-requisito)
+- [x] Páginas legadas quebradas removidas ou redirecionadas (pré-requisito)
+      — feito em 2026-07-23 (PLAN.md, task 2.0c): as 5 subrotas viram
+      `redirect('/')`. `app/restaurante/[id]/page.tsx` (índice) ficou de
+      fora do escopo e continua quebrada — ver nota em PLAN.md 2.0c.
 - [ ] Passo 1: dados salvos, slug único, preview ao vivo
 - [ ] Passo 1b: design do card salvo em `card_design_config`, preview
       nos 2 estados, `<CardPreview>` compartilhado com Web Wallet

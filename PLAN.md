@@ -401,6 +401,47 @@ fechar ANTES da spec-023 consumir a infra OTP. Tarefa pequena (1 sessão).
 
 ---
 
+### 2.0c — Limpeza das páginas legadas quebradas (pré-requisito da spec-010) ✅ 2026-07-23
+
+**Contexto:** as 5 páginas seguintes consultavam tabelas/colunas dropadas
+no reset de 22/07/2026 (`reviews`, `campaigns`, `customers.restaurant_id`,
+`restaurant.stamps_required`/`type`/`tone_of_voice`/`google_refresh_token`)
+e quebravam em runtime (ver notas de 0b/0f). Removidas/redirecionadas
+SEM corrigir a lógica — spec-010/2.9 reconstrói essas telas sobre o
+schema novo.
+
+**Critérios de aceite:**
+- [x] `app/restaurante/[id]/avaliacoes` — conteúdo substituído por
+      `redirect('/')`. Componente `AvaliacaoCard.tsx` e a Server Action
+      `app/actions/reviews.ts` (únicos consumidores, sem outros usos no
+      repo) deletados junto — código morto, não patch.
+- [x] `app/restaurante/[id]/campanhas` — idem, `redirect('/')`.
+- [x] `app/restaurante/[id]/clientes` — idem, `redirect('/')`.
+- [x] `app/restaurante/[id]/configuracoes` — idem, `redirect('/')`.
+- [x] `app/restaurante/[id]/wallet` — idem, `redirect('/')`.
+- [x] `tsc --noEmit` passa — 0 erros. `npx vitest run` → 31/31 (sem
+      regressão).
+- [x] Verificado ao vivo: as 5 rotas não fazem mais nenhuma query a
+      tabela dropada (removida a query inteira, não só corrigida) —
+      confirmado por leitura de cada arquivo pós-edição. Teste end-to-end
+      do redirect em si bloqueado pelo middleware de auth do dono neste
+      ambiente (sem sessão Supabase configurada, mesma limitação já
+      registrada nas tasks 2.0/2.0b) — `next/navigation`'s `redirect()`
+      é a API padrão documentada do Next.js, mesmo padrão já usado em
+      `login/page.tsx` (via `router.push`), risco de regressão baixo.
+
+**Achado fora de escopo (não corrigido nesta tarefa):**
+`app/restaurante/[id]/page.tsx` (a página-índice, NÃO listada no escopo
+desta tarefa) também consulta `reviews`, `campaigns` e
+`customers.restaurant_id` diretamente — está igualmente quebrada em
+runtime pelo mesmo reset. Como não estava no escopo explícito (CLAUDE.md,
+PLAN.md 0b/0f e spec-010 só listam as 5 subrotas acima), foi deixada como
+está. Precisa ser resolvida antes de qualquer demo com usuário real —
+provavelmente junto da spec-010/2.9, que substitui essa tela pela home
+do dashboard novo.
+
+---
+
 ### spec-010 — Wizard de onboarding (8 passos)
 
 ⚠️ **Arquivo criado em 2026-07-23** — `specs/010-onboarding-wizard.md`

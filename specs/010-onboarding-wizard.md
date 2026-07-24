@@ -282,8 +282,11 @@ de escrever qualquer migration nova — não duplicar o que já existe.
 
 - [x] Páginas legadas quebradas removidas ou redirecionadas (pré-requisito)
       — feito em 2026-07-23 (PLAN.md, task 2.0c): as 5 subrotas viram
-      `redirect('/')`. `app/restaurante/[id]/page.tsx` (índice) ficou de
-      fora do escopo e continua quebrada — ver nota em PLAN.md 2.0c.
+      `redirect('/')`. `app/restaurante/[id]/page.tsx` (índice), que
+      ficou de fora do escopo de 2.0c, foi corrigida na Sessão 1
+      (2026-07-24, ver PLAN.md) — reescrita contra o schema real
+      (`customer_programs`/`visits`/`redemptions`/`loyalty_config`),
+      sem nenhuma query a `reviews`/`campaigns`.
 - [ ] Passo 1: dados salvos, slug único, preview ao vivo
 - [ ] Passo 1b: design do card salvo em `card_design_config`, preview
       nos 2 estados, `<CardPreview>` compartilhado com Web Wallet

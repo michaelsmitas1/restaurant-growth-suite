@@ -6,7 +6,7 @@ export default async function Home() {
   const supabase = createClient();
   const { data: restaurants } = await supabase
     .from('restaurants')
-    .select('id, name, type, neighborhood, city, active')
+    .select('id, name, segment, neighborhood, city, active')
     .order('created_at', { ascending: false });
 
   if (!restaurants || restaurants.length === 0) {
@@ -83,7 +83,7 @@ export default async function Home() {
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 15 }}>{r.name}</div>
                       <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                        {r.type} · {r.neighborhood}, {r.city}
+                        {r.segment} · {r.neighborhood}, {r.city}
                       </div>
                     </div>
                   </div>

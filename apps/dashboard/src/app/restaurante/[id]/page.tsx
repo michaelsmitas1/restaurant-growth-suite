@@ -1,9 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import MetricCard from '@/components/MetricCard';
-import ReviewsList from '@/components/ReviewsList';
 import CustomersList from '@/components/CustomersList';
-import CampaignsList from '@/components/CampaignsList';
 import Sidebar from '@/components/Sidebar';
 import MobileNav from '@/components/MobileNav';
 
@@ -17,34 +15,44 @@ export default async function RestauranteDashboard({ params }: Props) {
   if (!restaurant) notFound();
 
   const [
-    { data: reviews },
-    { data: customers },
-    { data: campaigns },
+    { data: loyaltyConfig },
+    { data: firstMilestone },
+    { data: customerPrograms },
     { count: totalCustomers },
     { count: visitsThisWeek },
+    { count: redemptionsTotal },
   ] = await Promise.all([
-    supabase.from('reviews').select('*').eq('restaurant_id', params.id).order('created_at', { ascending: false }).limit(15),
-    supabase.from('customers').select('*').eq('restaurant_id', params.id).order('last_visit_at', { ascending: false }).limit(25),
-    supabase.from('campaigns').select('*').eq('restaurant_id', params.id).order('created_at', { ascending: false }).limit(6),
-    supabase.from('customers').select('*', { count: 'exact', head: true }).eq('restaurant_id', params.id),
+    supabase.from('loyalty_config').select('stamps_per_visit, validation_modes').eq('restaurant_id', params.id).maybeSingle(),
+    supabase.from('loyalty_milestones').select('stamps_required').eq('restaurant_id', params.id).order('position').limit(1).maybeSingle(),
+    supabase.from('customer_programs')
+      .select('id, current_stamps, total_visits, last_visit_at, customer:customers(name, phone)')
+      .eq('restaurant_id', params.id)
+      .order('last_visit_at', { ascending: false, nullsFirst: false })
+      .limit(25),
+    supabase.from('customer_programs').select('*', { count: 'exact', head: true }).eq('restaurant_id', params.id),
     supabase.from('visits').select('*', { count: 'exact', head: true }).eq('restaurant_id', params.id)
       .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+    supabase.from('redemptions').select('*', { count: 'exact', head: true }).eq('restaurant_id', params.id),
   ]);
 
-  const publishedReviews = reviews?.filter(r => r.status === 'published') || [];
-  const avgRating = reviews && reviews.length > 0
-    ? (reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length).toFixed(1) : '—';
-  const responseRate = reviews && reviews.length > 0
-    ? Math.round((publishedReviews.length / reviews.length) * 100) : 0;
-  const pendingReviews = reviews?.filter(r => r.status === 'pending').length || 0;
-  const totalMsgs = campaigns?.reduce((s, c) => s + (c.sent_to_count || 0), 0) || 0;
+  const stampsRequired = firstMilestone?.stamps_required ?? loyaltyConfig?.stamps_per_visit ?? 1;
+
+  const customers = (customerPrograms || []).map((cp: any) => ({
+    id: cp.id,
+    name: cp.customer?.name ?? null,
+    phone: cp.customer?.phone ?? null,
+    current_stamps: cp.current_stamps,
+    total_visits: cp.total_visits,
+    last_visit_at: cp.last_visit_at,
+  }));
 
   return (
     <div className="app-layout">
       <Sidebar
         restaurantId={params.id}
         restaurantName={restaurant.name}
-        googleConnected={!!restaurant.google_refresh_token}
+        // Conexão real com Google Business é spec-024 (Fase 3), ainda não existe.
+        googleConnected={false}
         activeSection=""
       />
 
@@ -55,18 +63,10 @@ export default async function RestauranteDashboard({ params }: Props) {
               Visão geral
             </h1>
             <p style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
-              {restaurant.name} · {restaurant.type} · {restaurant.neighborhood}
+              {restaurant.name} · {restaurant.segment || 'sem categoria'} · {restaurant.neighborhood || restaurant.city}
             </p>
           </div>
           <div className="page-header-badges">
-            {pendingReviews > 0 && (
-              <span style={{
-                background: 'var(--brand)', color: '#fff',
-                fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 99,
-              }}>
-                {pendingReviews} pendente{pendingReviews > 1 ? 's' : ''}
-              </span>
-            )}
             <span style={{
               background: restaurant.active ? '#f0fdf4' : '#f9fafb',
               color: restaurant.active ? '#16a34a' : 'var(--text-muted)',
@@ -79,18 +79,15 @@ export default async function RestauranteDashboard({ params }: Props) {
         </div>
 
         <div className="metrics-grid">
-          <MetricCard label="Nota no Google" value={avgRating} sub={`${reviews?.length || 0} avaliações`} />
-          <MetricCard label="Taxa de resposta" value={`${responseRate}%`} sub={`${publishedReviews.length} respondidas`} />
-          <MetricCard label="Clientes no Wallet" value={String(totalCustomers || 0)} sub={`${visitsThisWeek || 0} visitas essa semana`} />
-          <MetricCard label="Msgs enviadas" value={String(totalMsgs)} sub={`${campaigns?.length || 0} campanhas`} />
+          <MetricCard label="Clientes no programa" value={String(totalCustomers || 0)} sub={`${visitsThisWeek || 0} visitas essa semana`} />
+          <MetricCard label="Resgates totais" value={String(redemptionsTotal || 0)} />
+          <MetricCard label="Selos por visita" value={String(loyaltyConfig?.stamps_per_visit ?? 1)} />
+          <MetricCard label="Modo de validação" value={(loyaltyConfig?.validation_modes || []).join(', ') || '—'} />
         </div>
 
         <div className="content-grid">
-          <ReviewsList reviews={reviews || []} />
-          <CustomersList customers={customers || []} stampsRequired={restaurant.stamps_required} />
+          <CustomersList customers={customers} stampsRequired={stampsRequired} />
         </div>
-
-        <CampaignsList campaigns={campaigns || []} />
       </main>
 
       <MobileNav restaurantId={params.id} />

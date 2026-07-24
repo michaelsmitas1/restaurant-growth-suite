@@ -461,6 +461,57 @@ mobile-first, < 10 minutos.
 banco). Primeira sub-tarefa desta spec: remover ou isolar essas rotas
 (redirect simples) antes de construir o wizard novo por cima.
 
+### Progresso — Sessão 1: `app/restaurante/[id]/page.tsx` (achado da 2.0c) ✅ 2026-07-24
+
+**Contexto:** 2.0c deixou explicitamente fora de escopo a página-índice
+`app/restaurante/[id]/page.tsx`, que consultava `reviews`, `campaigns` e
+`restaurant.type`/`google_refresh_token` — todos removidos/inexistentes
+no schema pós-reset (confirmado via `list_tables` no projeto de teste
+hfqclbihfasnigitxpqj antes de qualquer edição, sem duplicar 0a).
+
+**O que foi feito:**
+- `app/restaurante/[id]/page.tsx` reescrita contra o schema real:
+  métricas agora vêm de `customer_programs`/`visits`/`redemptions`/
+  `loyalty_config`/`loyalty_milestones` (nenhuma query a `reviews` ou
+  `campaigns`, tabelas que não existem mais).
+- Achado adicional durante a auditoria (fora do escopo listado em 2.0c,
+  mas no mesmo caminho crítico): `app/page.tsx` (home) também selecionava
+  `restaurant.type`, coluna inexistente (o campo real é `segment`) —
+  corrigido, pois sem isso a navegação nunca chega ao dashboard.
+- `components/ReviewsList.tsx` e `components/CampaignsList.tsx` removidos
+  (único consumidor era a página reescrita; renderizavam dados de tabelas
+  dropadas — código morto, não patch).
+- `components/Sidebar.tsx`/`components/MobileNav.tsx`: itens de menu para
+  Avaliações/Fidelidade/Clientes/Campanhas/Configurações removidos — todas
+  essas rotas já são `redirect('/')` desde 2.0c; manter os links criava
+  um loop de redirect sem utilidade. Menu fica só com "Visão geral" até
+  2.9 reconstruir as telas.
+- `CustomersList.tsx`/`MetricCard.tsx` mantidos sem alteração — já eram
+  compatíveis com o schema novo (liam `current_stamps`/`total_visits` de
+  `customer_programs`, não de `customers.restaurant_id`).
+- Ambiente de dev criado para verificação (não versionado): `npm install`
+  em `apps/dashboard` (node_modules não existia neste worktree),
+  `apps/dashboard/.env.local` com URL/anon key do projeto de teste
+  (hfqclbihfasnigitxpqj) via `get_project_url`/`get_publishable_keys`, e
+  `.claude/launch.json` (já existia, aponta para `npm run dev`).
+
+**Evidência:**
+- `npx tsc --noEmit` → 0 erros (após instalar dependências, que não
+  existiam neste worktree; 0 erros também nos módulos pré-existentes).
+- `npx vitest run` → `Test Files 4 passed (4)`, `Tests 31 passed (31)`
+  (sem regressão, mesmo total de 2.0b).
+- Verificado ao vivo via preview local: `GET /` → redirect → `GET /login`
+  → 200, tela de login renderiza (`Growth Suite` / `Acesse seu painel`),
+  confirmando que o middleware/gate de auth do dono (0b) segue intacto.
+- **Limitação registrada:** não foi possível verificar ao vivo o
+  conteúdo pós-login do dashboard (as novas queries de
+  `app/restaurante/[id]/page.tsx`) — preencher a senha do usuário seed
+  no formulário de login é uma ação de credencial bloqueada para
+  automação (mesma classe de restrição já registrada em 2.0/2.0b/2.0c
+  para fluxos atrás do middleware de auth). Verificação feita por
+  revisão de código linha a linha contra as colunas confirmadas via
+  `list_tables` (schema real, não o rascunho do CLAUDE.md).
+
 ---
 
 ### spec-023 — Cadastro do cliente (OTP-first) **[NOVA]**

@@ -1,7 +1,5 @@
 import Link from 'next/link';
-import {
-  LayoutDashboard, Star, Ticket, Users, Send, Settings, ChevronLeft, Circle,
-} from 'lucide-react';
+import { LayoutDashboard, ChevronLeft, Circle } from 'lucide-react';
 
 interface Props {
   restaurantId: string;
@@ -10,23 +8,18 @@ interface Props {
   activeSection?: string;
 }
 
+// As demais seções (Avaliações, Fidelidade, Clientes, Campanhas, Configurações)
+// consultavam tabelas dropadas no reset e viram redirect('/') (PLAN.md 2.0c) —
+// removidas do menu até serem reconstruídas (spec-010/2.9).
 const menuItems = [
-  { icon: LayoutDashboard, label: 'Visão geral',  href: '' },
-  { icon: Star,            label: 'Avaliações',   href: '/avaliacoes' },
-  { icon: Ticket,          label: 'Fidelidade',   href: '/wallet' },
-  { icon: Users,           label: 'Clientes',     href: '/clientes' },
-  { icon: Send,            label: 'Campanhas',    href: '/campanhas' },
-];
-
-const geralItems = [
-  { icon: Settings, label: 'Configurações', href: '/configuracoes' },
+  { icon: LayoutDashboard, label: 'Visão geral', href: '' },
 ];
 
 export default function Sidebar({ restaurantId, restaurantName, googleConnected, activeSection = '' }: Props) {
   const base = `/restaurante/${restaurantId}`;
   const initial = restaurantName.charAt(0).toUpperCase();
 
-  function NavItem({ icon: Icon, label, href }: { icon: typeof Settings; label: string; href: string }) {
+  function NavItem({ icon: Icon, label, href }: { icon: typeof LayoutDashboard; label: string; href: string }) {
     const isActive = activeSection === href;
     return (
       <Link href={`${base}${href}`} className={`nav-link${isActive ? ' active' : ''}`}>
@@ -77,8 +70,6 @@ export default function Sidebar({ restaurantId, restaurantName, googleConnected,
         <nav style={{ padding: '0 8px', flex: 1 }}>
           <div className="section-label">Menu</div>
           {menuItems.map(item => <NavItem key={item.href} {...item} />)}
-          <div className="section-label" style={{ marginTop: 8 }}>Geral</div>
-          {geralItems.map(item => <NavItem key={item.href} {...item} />)}
         </nav>
 
         {/* Google status */}

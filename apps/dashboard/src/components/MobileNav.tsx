@@ -1,18 +1,16 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Star, Ticket, Users, Send } from 'lucide-react';
+import { LayoutDashboard } from 'lucide-react';
 
 interface Props {
   restaurantId: string;
 }
 
+// As demais seções viram redirect('/') (PLAN.md 2.0c) — removidas do menu
+// até serem reconstruídas (spec-010/2.9).
 const items = [
-  { icon: LayoutDashboard, label: 'Início',     href: '' },
-  { icon: Star,            label: 'Avaliações', href: '/avaliacoes' },
-  { icon: Ticket,          label: 'Fidelidade', href: '/wallet' },
-  { icon: Users,           label: 'Clientes',   href: '/clientes' },
-  { icon: Send,            label: 'Campanhas',  href: '/campanhas' },
+  { icon: LayoutDashboard, label: 'Início', href: '' },
 ];
 
 export default function MobileNav({ restaurantId }: Props) {

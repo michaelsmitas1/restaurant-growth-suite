@@ -442,7 +442,7 @@ do dashboard novo.
 
 ---
 
-### spec-010 — Wizard de onboarding (8 passos)
+### spec-010 — Wizard de onboarding (8 passos) 🟡 EM ANDAMENTO — Sessões 1-7/13 ✅ 2026-07-24
 
 ⚠️ **Arquivo criado em 2026-07-23** — `specs/010-onboarding-wizard.md`
 não existia até agora (só o resumo inline abaixo). Commitar antes de
@@ -460,6 +460,421 @@ mobile-first, < 10 minutos.
 `app/restaurante/[id]/*` quebram em runtime (ver CLAUDE.md, seção de
 banco). Primeira sub-tarefa desta spec: remover ou isolar essas rotas
 (redirect simples) antes de construir o wizard novo por cima.
+
+### Progresso — Sessão 1: `app/restaurante/[id]/page.tsx` (achado da 2.0c) ✅ 2026-07-24
+
+**Contexto:** 2.0c deixou explicitamente fora de escopo a página-índice
+`app/restaurante/[id]/page.tsx`, que consultava `reviews`, `campaigns` e
+`restaurant.type`/`google_refresh_token` — todos removidos/inexistentes
+no schema pós-reset (confirmado via `list_tables` no projeto de teste
+hfqclbihfasnigitxpqj antes de qualquer edição, sem duplicar 0a).
+
+**O que foi feito:**
+- `app/restaurante/[id]/page.tsx` reescrita contra o schema real:
+  métricas agora vêm de `customer_programs`/`visits`/`redemptions`/
+  `loyalty_config`/`loyalty_milestones` (nenhuma query a `reviews` ou
+  `campaigns`, tabelas que não existem mais).
+- Achado adicional durante a auditoria (fora do escopo listado em 2.0c,
+  mas no mesmo caminho crítico): `app/page.tsx` (home) também selecionava
+  `restaurant.type`, coluna inexistente (o campo real é `segment`) —
+  corrigido, pois sem isso a navegação nunca chega ao dashboard.
+- `components/ReviewsList.tsx` e `components/CampaignsList.tsx` removidos
+  (único consumidor era a página reescrita; renderizavam dados de tabelas
+  dropadas — código morto, não patch).
+- `components/Sidebar.tsx`/`components/MobileNav.tsx`: itens de menu para
+  Avaliações/Fidelidade/Clientes/Campanhas/Configurações removidos — todas
+  essas rotas já são `redirect('/')` desde 2.0c; manter os links criava
+  um loop de redirect sem utilidade. Menu fica só com "Visão geral" até
+  2.9 reconstruir as telas.
+- `CustomersList.tsx`/`MetricCard.tsx` mantidos sem alteração — já eram
+  compatíveis com o schema novo (liam `current_stamps`/`total_visits` de
+  `customer_programs`, não de `customers.restaurant_id`).
+- Ambiente de dev criado para verificação (não versionado): `npm install`
+  em `apps/dashboard` (node_modules não existia neste worktree),
+  `apps/dashboard/.env.local` com URL/anon key do projeto de teste
+  (hfqclbihfasnigitxpqj) via `get_project_url`/`get_publishable_keys`, e
+  `.claude/launch.json` (já existia, aponta para `npm run dev`).
+
+**Evidência:**
+- `npx tsc --noEmit` → 0 erros (após instalar dependências, que não
+  existiam neste worktree; 0 erros também nos módulos pré-existentes).
+- `npx vitest run` → `Test Files 4 passed (4)`, `Tests 31 passed (31)`
+  (sem regressão, mesmo total de 2.0b).
+- Verificado ao vivo via preview local: `GET /` → redirect → `GET /login`
+  → 200, tela de login renderiza (`Growth Suite` / `Acesse seu painel`),
+  confirmando que o middleware/gate de auth do dono (0b) segue intacto.
+- **Limitação registrada:** não foi possível verificar ao vivo o
+  conteúdo pós-login do dashboard (as novas queries de
+  `app/restaurante/[id]/page.tsx`) — preencher a senha do usuário seed
+  no formulário de login é uma ação de credencial bloqueada para
+  automação (mesma classe de restrição já registrada em 2.0/2.0b/2.0c
+  para fluxos atrás do middleware de auth). Verificação feita por
+  revisão de código linha a linha contra as colunas confirmadas via
+  `list_tables` (schema real, não o rascunho do CLAUDE.md).
+
+### Progresso — Sessão 2: schema gap (só o que faltava) ✅ 2026-07-24
+
+**Contexto:** `list_tables` (projeto de teste hfqclbihfasnigitxpqj) já
+tinha sido consultado na Sessão 1. Comparado campo a campo contra
+"Schema necessário" de `specs/010-onboarding-wizard.md`:
+`loyalty_config`, `loyalty_milestones` e `form_fields_config` **já
+cobrem tudo** que os Passos 3/4/5/6 precisam (nomes diferentes do
+rascunho da spec — ex. `accrual_mode` em vez de `accumulation_type`,
+`slow_days` em vez de `double_points_days` — mesmo formato) — **zero
+migration para essas 3 tabelas**, para não duplicar o que a Fase 0 (0a)
+já criou.
+
+Gap real, só em 2 tabelas:
+- `restaurants`: faltava um campo de endereço completo (Passo 1 pede
+  "Endereço completo, obrigatório" — hoje só existe `city`/`neighborhood`,
+  insuficiente) e 2 redes sociais (`instagram_handle`/`facebook_url` já
+  cobrem Instagram/Facebook, reaproveitados sem rename).
+- `card_design_config`: faltava distinguir ícone preset (por categoria)
+  de upload customizado — só existia uma única `icon_url` — e o texto
+  do contador (Passo 1b).
+
+**Migration:** `supabase/migrations/20260724010000_wizard_schema_gap.sql`
+(idempotente, padrão `information_schema`/`pg_constraint` já usado em
+2.0b) —
+- `restaurants`: `+ address`, `+ social_tiktok`, `+ social_website`.
+- `card_design_config`: `icon_url` renomeada para `stamp_icon_custom_url`
+  (não usada em nenhum código, grep confirmou); `+ stamp_icon_type`
+  (`preset`|`custom`, check constraint), `+ stamp_icon_preset`
+  (default `'plate'`), `+ stamp_label` (default `'visitas até o
+  prêmio'`).
+- Nenhuma mudança de RLS necessária — as 2 tabelas já nascem com RLS +
+  policy "owner full access" (0a), colunas novas herdam a mesma policy.
+
+**Evidência:**
+- Aplicada ao vivo via `apply_migration` no projeto de teste
+  (hfqclbihfasnigitxpqj) — `{"success":true}`.
+- `list_tables` pós-migration confirma as 6 colunas novas com os tipos/
+  defaults/comments esperados.
+- Idempotência testada: re-executado o mesmo SQL via `execute_sql` —
+  sem erro (`"idempotent rerun ok"`).
+- `get_advisors(security)` — mesmos 3 INFO de deny-all já documentados
+  em 0a/0c (customers/otp_codes/customer_sessions) + 1 WARN pré-existente
+  de "leaked password protection" (não relacionado a esta migration,
+  não introduzido por ela). Nenhum problema novo.
+- `npx tsc --noEmit` → 0 erros. `npx vitest run` → 31/31 (sem regressão
+  — mudança é só de schema, nenhum código de aplicação ainda lê as
+  colunas novas).
+
+### Progresso — Sessão 3: estrutura do wizard (componente base, navegação, persistência) ✅ 2026-07-24
+
+**O que foi feito:**
+- Dependências novas: `zustand` (estado do wizard, conforme CLAUDE.md) e
+  `zod` (validação de entrada externa nas Server Actions — CLAUDE.md
+  exige em "toda entrada externa"; ainda não havia nenhum uso no
+  dashboard, primeira vez que entra).
+- `lib/wizard/steps.ts`: fonte única dos 8 passos (id 0-7 + título),
+  `clampWizardStep`/`isValidWizardStep` — funções puras, testadas.
+- `lib/wizard/store.ts`: Zustand store só com `step` + `restaurantId`
+  (navegação). Dados de cada passo (nome, cor, design do card etc.)
+  ficam no estado do próprio componente de passo, não aqui — decisão
+  registrada no comentário do arquivo, relevante para a Sessão 4
+  (`<CardPreview>`) e 5-7.
+- `lib/wizard/actions.ts`: Server Action `advanceWizardStep` — zod
+  valida `{restaurantId, step}`, `requireOwner` valida posse (mesmo
+  helper usado em todo o dashboard), grava `restaurants.wizard_step`.
+  Centraliza a checagem de posse para as Sessões 5-7 não repetirem.
+- `components/wizard/Wizard.tsx` (client): shell com progresso
+  (`WizardProgress`), navegação Voltar/Continuar, e um registro de
+  componentes por passo (`STEP_COMPONENTS`) — hoje todos `null`
+  (renderiza `WizardStepPlaceholder`); Sessões 5/6/7 substituem os 3
+  primeiros. "Continuar" fica desabilitado sem `restaurantId` — é o
+  Passo 1 (Sessão 5) quem cria o restaurante ao salvar, não existe o
+  que persistir antes disso.
+- `app/onboarding/page.tsx`: Server Component — busca o restaurante do
+  owner autenticado com `wizard_completed_at is null` (retomar de onde
+  parou); se não houver nenhum, `initialRestaurantId = null` (fluxo
+  novo, aguardando o Passo 1). Rota já protegida pelo middleware
+  existente (não está em `PUBLIC_PATHS`); `getUser()`+redirect mantido
+  na própria página também, na mesma linha do checklist de segurança do
+  CLAUDE.md.
+- Gate de acesso ao dashboard só após `wizard_completed_at`
+  (critério de aceite da spec) **não foi ligado ainda** — decisão
+  deliberada: os Passos 3-7 não existem até a Sessão 12/13, ligar o gate
+  agora deixaria qualquer dono preso no wizard sem conseguir sair. Fica
+  para quando o wizard estiver completo (fora do escopo desta rodada,
+  Sessões 8+).
+
+**Evidência:**
+- `npx tsc --noEmit` → 0 erros. `npx vitest run` →
+  `Test Files 5 passed (5)`, `Tests 38 passed (38)` (31 anteriores + 7
+  novos de `lib/wizard/steps.test.ts`).
+- Verificado ao vivo via preview local: `GET /onboarding` sem sessão →
+  redireciona para `/login` (200, tela renderiza), sem erro de
+  compilação no servidor Next (`preview_logs` sem erros) — confirma que
+  a rota nova compila e o middleware cobre corretamente o caminho
+  novo. Conteúdo pós-login do wizard não verificado ao vivo pelo mesmo
+  motivo já registrado na Sessão 1 (preencher senha do dono é ação de
+  credencial bloqueada para automação).
+
+### Progresso — Sessão 4: `<CardPreview>` reutilizável ✅ 2026-07-24
+
+**O que foi feito:**
+- `lib/wizard/stampIconPresets.ts`: presets de ícone de selo por
+  categoria (Passo 1b) — `restaurante`/`bar`/`cafeteria`/`lanchonete`,
+  ícones do `lucide-react` já instalado (conferidos um a um em
+  `dynamicIconImports.js` antes de importar — lib não tem ícone de
+  hambúrguer/taco nativo, `Beef`/`Drumstick` usados como aproximação,
+  documentado no comentário do arquivo). `findStampIconPreset`/
+  `presetsForSegment` são funções puras, testadas (7 casos).
+- `components/CardPreview.tsx`: componente compartilhado (fora de
+  `components/wizard/`, de propósito — vai ser consumido pela Web
+  Wallet real, spec-019, não só pelo wizard). Props não dependem de
+  nada específico do wizard: `totalStamps`/`currentStamps` são
+  genéricos (marco ilustrativo no wizard, milestone real na wallet),
+  `stampIcon` aceita preset OU URL customizada, `isVip` já no shape
+  para quando a wallet precisar do badge. Rodapé "Feito com Remy"
+  fixo, não é prop — CLAUDE.md: não é configurável pelo dono.
+- Adicionado a `/dev/ui` (rota pública, dev-only) com toggle
+  vazio/exemplo (3/5) + uma segunda instância mostrando o estado VIP —
+  única forma de verificar visualmente sem depender de login (ver
+  limitação registrada na Sessão 1).
+
+**Evidência:**
+- `npx tsc --noEmit` → 0 erros. `npx vitest run` →
+  `Test Files 6 passed (6)`, `Tests 44 passed (44)` (38 anteriores + 6
+  novos de `stampIconPresets.test.ts`).
+- Verificado ao vivo via preview local em `/dev/ui`: `get_page_text`
+  confirma as duas instâncias renderizando corretamente — card 1
+  "Clube do Farrapos" em `0/5 visitas até o prêmio` (estado vazio,
+  preset `plate`) e card 2 "Clube VIP" com badge `VIP` visível em
+  `5/5 visitas até o prêmio` (preset `mug`, `textColor` customizado)
+  — confirma que preset resolution, contagem de selos e o badge VIP
+  condicional funcionam. `preview_logs` sem erros de servidor.
+
+### Progresso — Sessão 5: Passo 1 — dados do restaurante + slug + preview ✅ 2026-07-24
+
+**Refatoração necessária no shell (Sessão 3):** o `<Wizard>` genérico
+tinha um botão "Continuar" único que só avançava o passo — não dava
+para validar/salvar os dados de um passo real ali. Mudei para cada
+passo controlar seu próprio submit (`WizardStepProps.onSaved`, em
+`lib/wizard/types.ts`) — o shell só sabe navegar (Voltar) e trocar de
+passo quando o passo avisa que salvou. `Wizard.tsx` e `store.ts`
+ajustados (`setRestaurantId` novo).
+
+**Infra nova (migration `20260724030000_wizard_step1_infra.sql`):**
+- Bucket de Storage `restaurant-logos` (público, 2MB, jpg/png) —
+  path `{owner_id}/logo-{timestamp}.ext`, escopado por **owner_id**
+  (não restaurant_id) de propósito: o dono pode enviar a logo antes do
+  restaurante existir (a linha só nasce quando o Passo 1 é salvo).
+- `is_slug_available(check_slug, exclude_id)`: função `SECURITY
+  DEFINER` — a policy de `restaurants` (0a) restringe SELECT ao
+  próprio dono, então uma query direta reportaria "disponível" para
+  slugs de OUTROS donos (falso positivo); a função expõe só um
+  boolean, sem abrir uma policy de leitura ampla nem usar o service
+  client (CLAUDE.md restringe a 3 lugares, este não seria um deles).
+- **2 problemas achados pelo `get_advisors(security)` e corrigidos
+  antes de seguir** (não estavam óbvios até rodar o advisor): (1) a
+  policy de SELECT pública em `storage.objects` era desnecessária e
+  permitia *listar* todos os arquivos do bucket (bucket público já
+  serve por URL sem RLS) — removida; (2) `revoke ... from public` não
+  bastou para tirar o acesso de `anon`/`authenticated` — o Supabase
+  concede `EXECUTE` por default privileges na criação da função,
+  precisou revogar de cada role explicitamente antes de conceder só a
+  `authenticated`. Migration corrigida no arquivo E reaplicada no
+  banco de teste antes de prosseguir.
+- WARN aceito conscientemente (não é bug): `authenticated` pode
+  executar uma função `SECURITY DEFINER` — intencional, é exatamente
+  quem precisa chamá-la (o dono autenticado no wizard).
+
+**Código:**
+- `lib/slug.ts`: `slugify`/`isValidSlug`, funções puras testadas (9
+  casos — acentos, pontuação, espaços/underscores repetidos, corte em
+  60 chars).
+- `lib/wizard/step1.ts`: Server Action `saveStep1` — zod valida,
+  reconfere a disponibilidade do slug no banco (fonte de verdade, o
+  debounce do cliente é só UX), cria OU atualiza `restaurants`
+  (`.eq('owner_id', user.id)` + RLS como segunda camada), avança
+  `wizard_step` para 1.
+- `app/api/check-slug/route.ts`: `GET ?slug=&excludeId=` (conforme
+  "Regras de implementação" da spec), usa a RPC acima.
+- `components/wizard/Step1.tsx`: formulário completo — nome,
+  categoria, endereço, cor (color picker), upload de logo (client-side
+  direto pro Storage via `lib/supabase/client.ts`, valida tipo/tamanho
+  antes de enviar), slug sugerido do nome (debounce 500ms, editável) +
+  checagem de disponibilidade ao vivo (debounce 500ms), preview ao
+  vivo com `<CardPreview>` (Sessão 4). Retomada: se `restaurantId` já
+  existe, carrega os dados salvos ao montar.
+
+**Evidência:**
+- `npx tsc --noEmit` → 0 erros. `npx vitest run` →
+  `Test Files 7 passed (7)`, `Tests 53 passed (53)` (44 anteriores + 9
+  novos de `lib/slug.test.ts`).
+- RPC testada ao vivo via `execute_sql`: slug já usado pelo seed
+  (`sorveteria-da-vo-maria`) → `available = false`; slug livre →
+  `true`; mesmo slug usado, mas excluindo o próprio id → `true`
+  (confirma que editar o Passo 1 sem trocar de slug não se autobloqueia).
+- `get_advisors(security)` pós-correção: só os 3 INFO de deny-all já
+  documentados + o WARN aceito de `authenticated` na função + o WARN
+  pré-existente de leaked password protection. Nenhum problema não
+  documentado.
+- Verificado ao vivo via preview local: `/onboarding` sem sessão →
+  redireciona para `/login` (200) sem erro de compilação — confirma
+  que `Step1.tsx` e suas dependências (Server Action, rota de API,
+  upload client-side) compilam limpo no bundler do Next, não só no
+  `tsc`. `/dev/ui` seguiu 200 sem regressão. Preencher o formulário do
+  Passo 1 de ponta a ponta (upload de logo real, submit) não foi
+  verificado ao vivo pelo mesmo motivo já registrado na Sessão 1
+  (login bloqueado para automação).
+
+### Progresso — Sessão 6: Passo 1b — design do card + upload + extração de cor ✅ 2026-07-24
+
+**Infra nova (migration `20260724040000_wizard_step1b_infra.sql`):**
+- Bucket de Storage `stamp-icons` (público, 200KB, só PNG). Diferente do
+  `restaurant-logos` (Sessão 5), aqui o path é escopado por
+  **restaurant_id** (não owner_id) — no Passo 1b o restaurante já existe
+  (o Passo 1 já criou), então dá pra verificar posse real via subquery em
+  `restaurants` (mesmo padrão de posse do resto do schema). Sem policy de
+  SELECT, mesmo raciocínio documentado na migration da Sessão 5 (bucket
+  público não precisa — só criaria uma forma de listar os arquivos).
+  `get_advisors(security)` pós-aplicação: nenhum problema novo.
+
+**Código:**
+- `lib/wizard/color.ts`: `averageColorFromPixels`/`rgbToHex` — a
+  matemática pura da "sugestão automática extraída da logo" (spec), 5
+  casos testados (média de pixels sólidos, ignora pixels 100%
+  transparentes, default quando tudo é transparente). A leitura de
+  pixels em si (canvas + `Image`, só existe no DOM) fica no componente,
+  não dá pra testar sem canvas real — mesma fronteira pura/IO já usada
+  em `lib/otp/rules.ts` vs `lib/otp/index.ts`.
+- `lib/wizard/step1b.ts`: Server Action `saveStep1b` — `requireOwner`
+  (restaurante já existe neste passo, diferente do Passo 1), zod valida
+  (inclui `refine`: preset OU URL customizada, nunca os dois vazios),
+  `upsert` em `card_design_config` (`onConflict: restaurant_id`),
+  avança `wizard_step` para 2.
+- `components/wizard/Step1b.tsx`: cor de fundo (color picker + botão
+  "Sugerir da logo", só aparece se houver logo do Passo 1), grade de
+  presets de ícone por categoria (`lib/wizard/stampIconPresets.ts`,
+  Sessão 4) + upload de PNG customizado, nome do programa (máx 30,
+  contador visível, sugestão "Programa {nome}" pré-carregada), texto do
+  contador, formato do código (QR/código de barras), aviso sobre
+  diferenças entre wallets (texto fixo da spec), preview ao vivo com
+  toggle vazio/exemplo via `<CardPreview>`. Retomada: carrega
+  `card_design_config` existente ao montar, se houver.
+
+**Evidência:**
+- `npx tsc --noEmit` → 0 erros. `npx vitest run` →
+  `Test Files 8 passed (8)`, `Tests 58 passed (58)` (53 anteriores + 5
+  novos de `lib/wizard/color.test.ts`).
+- Verificado ao vivo via preview local: `/onboarding` (sem sessão) e
+  `/dev/ui` seguem 200 sem erro de compilação — confirma que
+  `Step1b.tsx` e o novo Server Action compilam limpo no bundler do
+  Next. Preenchimento completo do Passo 1b (upload de ícone real,
+  extração de cor de uma logo real, submit) não verificado ao vivo pelo
+  mesmo motivo da Sessão 1 (login bloqueado para automação).
+
+### Progresso — Sessão 7: Passo 2 — Google Business + redes sociais ✅ 2026-07-24
+
+**Última sessão do escopo pedido nesta rodada (1-7) — Sessões 8+ (Passo 3
+em diante) não iniciadas, conforme instrução.**
+
+**Código:**
+- `lib/googlePlaces.ts`: `parseGoogleBusinessLink` — interpreta o link
+  colado pelo dono (extrai `place_id` direto quando presente em
+  `place_id`/`query_place_id`/`placeid`, ou o nome do restaurante do
+  path `/place/.../` como query de busca; texto sem ser URL vira busca
+  livre). `buildGoogleReviewLink` monta o link de review a partir do
+  `place_id`. 7 casos testados. Links encurtados
+  (`maps.app.goo.gl`/`g.co`) não são resolvidos — precisariam seguir
+  redirect, documentado como limitação conhecida no comentário do
+  arquivo, não escondida.
+- `app/api/verify-google-business/route.ts`: `POST` server-side (usa
+  `GOOGLE_PLACES_API_KEY`, nunca exposta ao cliente) — Find Place (se
+  não veio `place_id` direto) + Place Details, retorna nome/endereço/
+  foto/link de review. Sem a env var configurada, responde 500 com
+  mensagem clara em vez de derrubar a rota — **não testado com chamada
+  real à API do Google** nesta sessão: `GOOGLE_PLACES_API_KEY` não está
+  configurada neste ambiente de desenvolvimento (nem no `.env.local`
+  usado para os previews desta rodada), documentado como pendência
+  igual ao já registrado em 0c para o envio real de WhatsApp.
+  `GOOGLE_PLACES_API_KEY` documentada em `.env.example`.
+- `lib/wizard/step2.ts`: Server Action `saveStep2` — todo campo é
+  opcional (spec: "pode pular... sem preencher redes sociais"), zod
+  normaliza string vazia para `null`, `requireOwner` valida posse,
+  avança `wizard_step` para 3.
+- `components/wizard/Step2.tsx`: campo de link + botão "Verificar" →
+  chama a rota acima, mostra card de confirmação (nome/endereço/foto)
+  quando verificado; link de review pré-preenchido e editável;
+  Instagram/Facebook/TikTok/Site (todos opcionais); "Continuar" nunca
+  fica bloqueado (nenhum campo é obrigatório neste passo).
+
+**Evidência:**
+- `npx tsc --noEmit` → 0 erros. `npx vitest run` →
+  `Test Files 9 passed (9)`, `Tests 65 passed (65)` (58 anteriores + 7
+  novos de `lib/googlePlaces.test.ts`).
+- Verificado ao vivo via preview local: `/onboarding`, `/dev/ui` e
+  `/api/check-slug` (sem sessão) seguem redirecionando/respondendo
+  corretamente, sem erro de compilação — confirma que `Step2.tsx`, a
+  Server Action e a nova rota de API compilam limpo no bundler do
+  Next. Fluxo completo do Passo 2 (verificação real contra a API do
+  Google, submit) não verificado ao vivo — soma das duas limitações já
+  registradas nesta rodada: login bloqueado para automação (Sessão 1)
+  e `GOOGLE_PLACES_API_KEY` não configurada neste ambiente.
+
+### Pós-Sessão 7 — 2 bugs reais encontrados testando localmente ✅ 2026-07-24
+
+**Contexto:** o usuário rodou o dashboard localmente (`npm run dev`) pela
+primeira vez desde o início desta rodada — a limitação de automação
+(login bloqueado para preencher senha, registrada em toda sessão acima)
+significava que **nenhum login real tinha sido testado ponta a ponta**
+neste projeto até agora, em nenhuma sessão anterior (0b só testou "sem
+sessão → redirect /login", nunca "com sessão → passa"). Dois bugs reais
+apareceram, nenhum dos dois introduzido pelas Sessões 1-7:
+
+**1. Login travava em "Entrando..." indefinidamente.**
+Diagnóstico ao vivo (Network tab do usuário + log de debug temporário no
+middleware): o `POST /auth/v1/token` retornava 200 (login funcionava no
+Supabase), mas a navegação seguinte sempre voltava 307 pro `/login` — o
+cookie de sessão (`sb-...-auth-token`) chegava certinho na request
+seguinte, mas `supabase.auth.getUser()` respondia `"Auth session
+missing!"` mesmo assim. Causa raiz: `package.json` tinha
+`"@supabase/ssr": "^0.1.0"` (versão travada em 0.1.x pelo `^`, muito
+antiga) rodando ao lado de `@supabase/supabase-js@2.108.1` (resolvido
+solto, bem mais novo) — o formato de cookie que a versão antiga do `ssr`
+escreve não é mais compatível com o que a versão nova do `supabase-js`
+espera ler. Corrigido: `@supabase/ssr` atualizado para `^0.12.3`
+(latest). Approveitando, `login/page.tsx` trocou `router.push('/') +
+router.refresh()` por `window.location.href = '/'` — navegação
+client-side corria risco de disparar antes do cookie estar
+100% gravado; navegação completa garante que ele vai junto (mesmo com
+a lib corrigida, é mais robusto contra a mesma classe de corrida).
+- Evidência: log de debug temporário no middleware mostrou
+  `hasUser: false, userError: 'Auth session missing!'` antes da correção
+  e `hasUser: true, userError: null` depois — mesmo cookie, mesma rota,
+  única mudança foi a versão da lib. `tsc --noEmit`: 0 erros. `vitest
+  run`: 65/65. Confirmado ao vivo pelo usuário: login completo, chegou
+  no dashboard.
+
+**2. Dashboard mostrava todo cliente como "Anônimo".**
+Achado ao testar o dashboard já logado (print do usuário): a query de
+`app/restaurante/[id]/page.tsx` (reescrita na Sessão 1) embutia
+`customer:customers(name, phone)` via PostgREST a partir de
+`customer_programs` — mas `customers` nasce **deny-all** por decisão
+deliberada (CLAUDE.md/0a/0c: "acesso só passa por
+`lib/customerSession.ts`"), então o client do dono nunca conseguia ler
+o embed. Não era um bug introduzido pela Sessão 1 em si — a query antiga
+(pré-Sessão 1) usava um schema totalmente diferente e quebrava antes de
+chegar nesse ponto, então isso nunca tinha sido exercitado.
+Corrigido com o mesmo padrão já usado em `is_slug_available` (Sessão 5):
+migration `20260724050000_dashboard_customers_rpc.sql` — função
+`dashboard_customers_for_restaurant(p_restaurant_id)` `SECURITY
+DEFINER`, verifica posse do restaurante internamente, devolve só
+id/nome/telefone/selos/visitas dos clientes DAQUELE restaurante. Não
+abre nenhuma policy nova em `customers` (a decisão de deny-all continua
+intacta) nem usa o service client (que é restrito aos 3 lugares do
+CLAUDE.md). `page.tsx` trocado para `supabase.rpc(...)` em vez do embed.
+- `get_advisors(security)`: mesmo padrão de WARN aceito conscientemente
+  já usado em `is_slug_available` (função SECURITY DEFINER executável
+  por `authenticated`, intencional). Nenhum problema novo.
+- `tsc --noEmit`: 0 erros. `vitest run`: 65/65 (nenhum teste novo — é
+  lógica de banco, mesmo padrão de `is_slug_available` que também não
+  tem teste unitário próprio, só verificação via `execute_sql` ao vivo).
+- Confirmado ao vivo pelo usuário: nomes reais aparecendo na lista de
+  clientes do dashboard (print pós-fix pendente de confirmação final).
 
 ---
 

@@ -1,5 +1,7 @@
 # spec-010 — Wizard de Onboarding
-# Status: [ ] Não iniciado
+# Status: [~] Em andamento — Sessões 1-7/13 concluídas (2026-07-24, ver PLAN.md)
+#         Passos 1, 1b e 2 (de 8) funcionais. Passos 3-7 + testes e2e
+#         seguem nas Sessões 8-13 (fora do escopo desta rodada).
 # Criado em: 2026-07-23 (o arquivo nunca existia — só o resumo em PLAN.md)
 # Prioridade: PRIMEIRA da Fase 2 — desbloqueia todas as outras specs
 # Depende de: Fase 0 completa (✅), limpeza das páginas legadas quebradas
@@ -204,58 +206,70 @@ link do display (se Modo 3), botão "Ir para o dashboard" (conclui).
 
 ## Schema necessário (migrations novas sobre o schema pós-reset)
 
-`restaurants` já existe com owner_id/slug/cores/redes sociais/wizard_step
-(criada em 0a) — confirmar que os campos abaixo estão cobertos, senão
-adicionar via migration:
+✅ Confirmado na Sessão 2 (2026-07-24, ver PLAN.md) via `list_tables` no
+projeto de teste — nomes de coluna **reais** (o rascunho abaixo, na
+versão original desta spec, usava nomes diferentes; o banco é a fonte
+de verdade, os nomes efetivos estão comentados ao lado de cada campo
+equivalente).
+
+`restaurants` (0a + gap da Sessão 2, migration
+`20260724010000_wizard_schema_gap.sql`):
 ```sql
+-- já existia em 0a:
 google_place_id         text
 google_review_link      text
-social_instagram        text
-social_facebook         text
+instagram_handle        text  -- = "social_instagram" do rascunho
+facebook_url            text  -- = "social_facebook" do rascunho
+-- adicionado na Sessão 2 (não existia):
+address                 text
 social_tiktok           text
 social_website          text
 ```
 
-`card_design_config` (já existe no schema de 0a — confirmar colunas):
+`card_design_config` (0a + gap da Sessão 2):
 ```sql
 id                      uuid primary key default gen_random_uuid()
 restaurant_id           uuid references restaurants(id) not null unique
-color_background        text
-stamp_icon_type         text default 'preset'  -- 'preset' | 'custom'
-stamp_icon_preset       text default 'plate'
-stamp_icon_custom_url   text
-program_name            text
-stamp_label             text default 'visitas até o prêmio'
-barcode_format          text default 'qr'
+background_color        text default '#10244A'  -- = "color_background" do rascunho
+stamp_icon_type         text default 'preset' check (in ('preset','custom'))  -- Sessão 2
+stamp_icon_preset       text default 'plate'                                  -- Sessão 2
+stamp_icon_custom_url   text  -- renomeada de icon_url na Sessão 2
+program_name            text default 'Fidelidade'
+stamp_label             text default 'visitas até o prêmio'                   -- Sessão 2
+barcode_type            text default 'qr' check (in ('qr','pdf417','aztec'))  -- = "barcode_format" do rascunho
+text_color              text default '#FFFFFF'  -- extra, não estava no rascunho
+hero_image_url          text                     -- extra, não estava no rascunho
 created_at              timestamptz default now()
 updated_at              timestamptz default now()
 ```
 
-`loyalty_config` (já existe — confirmar colunas):
+`loyalty_config` (0a — **zero gap**, nomes diferentes do rascunho mas
+mesmo formato/cobertura, confirmado campo a campo na Sessão 2):
 ```sql
-id                       uuid primary key default gen_random_uuid()
-restaurant_id            uuid references restaurants(id) not null
-accumulation_type        text check (accumulation_type in ('visit','value'))
-accumulation_value       int default 1
-welcome_bonus            int default 0
-double_points_days       int[] default '{}'
-birthday_multiplier      int default 3
-validation_modes         text[] default '{scanner}'
-time_lock_hours          int default 6
-password_expiry_hours    int default 6
-whatsapp_welcome         boolean default true
-whatsapp_near_prize      boolean default true
-whatsapp_inactive        boolean default true
-whatsapp_inactive_days   int default 30
-whatsapp_birthday        boolean default true
-voice_tone               text check (voice_tone in ('casual','balanced','formal')) default 'balanced'
-created_at               timestamptz default now()
-updated_at               timestamptz default now()
+accrual_mode                  text check (in ('visit','value'))  -- = "accumulation_type"
+stamps_per_visit              int default 1        -- = "accumulation_value" (modo visita)
+value_per_stamp                numeric               -- = "accumulation_value" (modo valor)
+signup_bonus_stamps           int default 0        -- = "welcome_bonus"
+slow_days                     text[] default '{}'  -- = "double_points_days"
+slow_day_multiplier           numeric default 2
+birthday_multiplier           numeric default 2
+validation_modes              text[] default '{scanner}'
+daily_password_valid_hours    int default 12       -- = "password_expiry_hours"
+whatsapp_welcome_enabled      boolean default true
+whatsapp_near_reward_enabled  boolean default true
+whatsapp_inactive_enabled     boolean default true
+whatsapp_inactive_days        int default 30
+whatsapp_birthday_enabled     boolean default true
+tone_of_voice                 text check (in ('descontraido','equilibrado','formal'))  -- = "voice_tone"
+google_review_bonus_stamps    int default 0  -- extra, não estava no rascunho
 ```
+Nota: `time_lock_hours` do rascunho (trava do Modo 3 — QR rotativo) não
+tem coluna própria porque o Modo 3 usa `ROTATING_QR_SECRET` + janela fixa
+de 3 min (CLAUDE.md), não é configurável por restaurante — não é gap, é
+decisão de produto já definida.
 
-`loyalty_milestones` e `form_fields_config`: já existem no schema de 0a
-com o formato descrito no CLAUDE.md. Confirmar via `list_tables` antes
-de escrever qualquer migration nova — não duplicar o que já existe.
+`loyalty_milestones` e `form_fields_config`: confirmadas sem gap na
+Sessão 2 — formato já é exatamente o do CLAUDE.md.
 
 ---
 
@@ -282,38 +296,80 @@ de escrever qualquer migration nova — não duplicar o que já existe.
 
 - [x] Páginas legadas quebradas removidas ou redirecionadas (pré-requisito)
       — feito em 2026-07-23 (PLAN.md, task 2.0c): as 5 subrotas viram
-      `redirect('/')`. `app/restaurante/[id]/page.tsx` (índice) ficou de
-      fora do escopo e continua quebrada — ver nota em PLAN.md 2.0c.
-- [ ] Passo 1: dados salvos, slug único, preview ao vivo
-- [ ] Passo 1b: design do card salvo em `card_design_config`, preview
-      nos 2 estados, `<CardPreview>` compartilhado com Web Wallet
-- [ ] Passo 2: Google Business via Places API, link de review salvo
+      `redirect('/')`. `app/restaurante/[id]/page.tsx` (índice), que
+      ficou de fora do escopo de 2.0c, foi corrigida na Sessão 1
+      (2026-07-24, ver PLAN.md) — reescrita contra o schema real
+      (`customer_programs`/`visits`/`redemptions`/`loyalty_config`),
+      sem nenhuma query a `reviews`/`campaigns`.
+- [x] Estrutura base do wizard (componente, navegação, persistência de
+      `wizard_step`) — Sessão 3 (2026-07-24, ver PLAN.md). Passos 0-7
+      registrados (`lib/wizard/steps.ts`), Zustand para navegação,
+      `advanceWizardStep` (Server Action, zod + `requireOwner`),
+      `/onboarding` retoma de onde o dono parou. Gate "dashboard só
+      após wizard_completed_at" fica para quando os 8 passos existirem
+      (fora do escopo desta rodada).
+- [x] Passo 1: dados salvos, slug único, preview ao vivo — Sessão 5
+      (2026-07-24, ver PLAN.md). `saveStep1` cria/atualiza `restaurants`,
+      `is_slug_available` (RPC) garante unicidade real no banco,
+      `<CardPreview>` atualiza ao vivo com nome/cor/logo.
+- [x] `<CardPreview>` construído e compartilhável — Sessão 4
+      (2026-07-24, ver PLAN.md): `components/CardPreview.tsx`, fora de
+      `components/wizard/` de propósito para ser consumido pela Web
+      Wallet real (spec-019) sem alteração de props. Presets de ícone
+      por categoria em `lib/wizard/stampIconPresets.ts` (testado).
+      Falta: `card_design_config` salvo pelo Passo 1b em si (Sessão 6).
+- [x] Passo 1b: design do card salvo em `card_design_config`, preview
+      nos 2 estados usando o `<CardPreview>` da Sessão 4 — Sessão 6
+      (2026-07-24, ver PLAN.md). `saveStep1b` faz upsert, upload de
+      ícone customizado (bucket `stamp-icons`) e sugestão de cor a
+      partir da logo (canvas, `lib/wizard/color.ts` testado).
+- [x] Passo 2: Google Business via Places API, link de review salvo —
+      Sessão 7 (2026-07-24, ver PLAN.md). `POST /api/verify-google-business`
+      + `saveStep2` (todos os campos opcionais, conforme a spec).
+      Verificação real contra a API do Google não testada —
+      `GOOGLE_PLACES_API_KEY` não configurada neste ambiente.
 - [ ] Passo 3: campos salvos em `form_fields_config`, nota sobre aceite
       visível
 - [ ] Passo 4: programa salvo em `loyalty_config` + `loyalty_milestones`
 - [ ] Passo 5: modos de validação salvos, recomendação por categoria
 - [ ] Passo 6: toggles e tom salvos, preview real via Claude API
 - [ ] Passo 7: QRs gerados corretamente, PDF funcional
-- [ ] Estado persistido: sair e voltar mantém progresso
-- [ ] Dashboard só acessível após `wizard_completed_at`
-- [ ] Todas as migrations idempotentes, RLS confirmado
-- [ ] Mobile-first: wizard funciona no celular do dono
-- [ ] `tsc --noEmit` passa
-- [ ] Teste end-to-end: wizard completo em menos de 10 minutos
-- [ ] QR do Passo 7 abre `remy.app.br/[slug]/entrar` corretamente
+- [~] Estado persistido: sair e voltar mantém progresso — funciona para
+      os Passos 1/1b/2 (únicos implementados até a Sessão 7); cada um
+      recarrega seus próprios dados salvos ao montar. Só fecha de fato
+      quando os Passos 3-7 existirem (Sessões 8+).
+- [ ] Dashboard só acessível após `wizard_completed_at` — decisão
+      deliberada da Sessão 3: não ligar esse gate antes do wizard estar
+      completo, ver PLAN.md.
+- [x] Todas as migrations idempotentes, RLS confirmado — Sessão 2
+      (2026-07-24): `20260724010000_wizard_schema_gap.sql` aplicada e
+      re-testada idempotente via `execute_sql`; `get_advisors(security)`
+      sem problema novo. Migrations futuras das Sessões 8+ (fora do
+      escopo desta rodada) seguem o mesmo padrão.
+- [~] Mobile-first: wizard funciona no celular do dono — layout dos
+      Passos 1/1b/2 usa os padrões mobile-first do design system
+      (`max-w-lg`, touch targets ≥44px via `<Button>`/`<Input>`), não
+      testado em viewport real (ver limitação de login nas evidências
+      de cada sessão em PLAN.md).
+- [x] `tsc --noEmit` passa — confirmado a cada sessão (1-7), 0 erros.
+- [ ] Teste end-to-end: wizard completo em menos de 10 minutos — só
+      possível com os 8 passos prontos (Sessões 8-13).
+- [ ] QR do Passo 7 abre `remy.app.br/[slug]/entrar` corretamente —
+      Passo 7 (QRs) é Sessão 12, fora do escopo desta rodada.
 
 ---
 
 ## Sessões de implementação sugeridas
 
 ```
-Sessão 1:  Remover/redirecionar páginas legadas quebradas
-Sessão 2:  Confirmar schema existente vs. necessário (migrations só do gap)
-Sessão 3:  Estrutura do wizard (componente base, navegação, persistência)
-Sessão 4:  Componente <CardPreview> (reutilizável)
-Sessão 5:  Passo 1 — dados do restaurante + slug + preview
-Sessão 6:  Passo 1b — design do card + upload + extração de cor
-Sessão 7:  Passo 2 — Google Business + redes sociais
+Sessão 1:  ✅ Remover/redirecionar páginas legadas quebradas (2026-07-24)
+Sessão 2:  ✅ Confirmar schema existente vs. necessário (migrations só do gap) (2026-07-24)
+Sessão 3:  ✅ Estrutura do wizard (componente base, navegação, persistência) (2026-07-24)
+Sessão 4:  ✅ Componente <CardPreview> (reutilizável) (2026-07-24)
+Sessão 5:  ✅ Passo 1 — dados do restaurante + slug + preview (2026-07-24)
+Sessão 6:  ✅ Passo 1b — design do card + upload + extração de cor (2026-07-24)
+Sessão 7:  ✅ Passo 2 — Google Business + redes sociais (2026-07-24)
+—— rodada de 2026-07-24 parou aqui, conforme escopo pedido ——
 Sessão 8:  Passo 3 — campos do formulário
 Sessão 9:  Passo 4 — programa (acúmulo + milestones + bônus)
 Sessão 10: Passo 5 — modos de validação

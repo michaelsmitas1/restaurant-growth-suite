@@ -2,14 +2,12 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const supabase = createClient();
 
   async function handleLogin(e: React.FormEvent) {
@@ -22,10 +20,16 @@ export default function LoginPage() {
     if (error) {
       setError('Email ou senha inválidos');
       setLoading(false);
-    } else {
-      router.push('/');
-      router.refresh();
+      return;
     }
+
+    // Navegação client-side (router.push) corre risco de disparar antes do
+    // cookie de sessão ser gravado pelo navegador — o middleware então não
+    // vê sessão nenhuma e redireciona de volta pro /login (bug observado ao
+    // vivo: POST /token 200, seguido de 307 de volta pro login). Navegação
+    // completa (nova request do zero) garante que o cookie já gravado vai
+    // junto.
+    window.location.href = '/';
   }
 
   return (

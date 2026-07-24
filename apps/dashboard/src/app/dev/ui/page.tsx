@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Toggle } from '@/components/ui/Toggle';
 import { Select } from '@/components/ui/Select';
 import { ConsentScreen } from '@/components/ui/ConsentScreen';
+import CardPreview from '@/components/CardPreview';
 
 /**
  * Página de referência dos componentes base — dev-only.
@@ -21,6 +22,7 @@ export default function DevUiPage() {
 
   const [toggleOn, setToggleOn] = useState(true);
   const [showConsent, setShowConsent] = useState(false);
+  const [cardFilled, setCardFilled] = useState(false);
 
   if (showConsent) {
     return (
@@ -98,6 +100,35 @@ export default function DevUiPage() {
         <Button variant="secondary" onClick={() => setShowConsent(true)}>
           Ver tela de aceite
         </Button>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold">CardPreview (spec-010, Passo 1b — reusado pela Web Wallet)</h2>
+        <div className="flex flex-wrap items-start gap-3">
+          <Button variant="secondary" onClick={() => setCardFilled(v => !v)}>
+            {cardFilled ? 'Ver vazio' : 'Ver exemplo (3/5)'}
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-8">
+          <CardPreview
+            programName="Clube do Farrapos"
+            backgroundColor="#12224F"
+            stampLabel="visitas até o prêmio"
+            stampIcon={{ type: 'preset', preset: 'plate' }}
+            totalStamps={5}
+            currentStamps={cardFilled ? 3 : 0}
+          />
+          <CardPreview
+            programName="Clube VIP"
+            backgroundColor="#E1C463"
+            textColor="#12224F"
+            stampLabel="visitas até o prêmio"
+            stampIcon={{ type: 'preset', preset: 'mug' }}
+            totalStamps={5}
+            currentStamps={5}
+            isVip
+          />
+        </div>
       </section>
 
       <section className="space-y-4">

@@ -5,6 +5,7 @@ interface WizardState {
   step: number;
   restaurantId: string | null;
   setStep: (step: number) => void;
+  setRestaurantId: (id: string) => void;
   hydrate: (data: { step: number; restaurantId: string | null }) => void;
 }
 
@@ -17,5 +18,6 @@ export const useWizardStore = create<WizardState>((set) => ({
   step: FIRST_WIZARD_STEP,
   restaurantId: null,
   setStep: (step) => set({ step: clampWizardStep(step) }),
+  setRestaurantId: (id) => set({ restaurantId: id }),
   hydrate: (data) => set({ step: clampWizardStep(data.step), restaurantId: data.restaurantId }),
 }));

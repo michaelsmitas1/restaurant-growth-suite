@@ -1,18 +1,22 @@
 'use client';
 
-import { useEffect, useState, type ComponentType } from 'react';
+import { useEffect, type ComponentType } from 'react';
 import { useWizardStore } from '@/lib/wizard/store';
-import { LAST_WIZARD_STEP } from '@/lib/wizard/steps';
-import { advanceWizardStep } from '@/lib/wizard/actions';
+import type { WizardStepProps } from '@/lib/wizard/types';
 import { Button } from '@/components/ui/Button';
 import WizardProgress from './WizardProgress';
 import WizardStepPlaceholder from './WizardStepPlaceholder';
+import Step1 from './Step1';
 
-// Registro de componentes por passo — Sessões 5/6/7 substituem os `null`
-// pelos componentes reais (Passo 1, 1b, 2). Passos 3-7 ficam como
-// placeholder até as Sessões 8+ (fora do escopo desta rodada, ver
-// specs/010-onboarding-wizard.md).
-const STEP_COMPONENTS: Array<ComponentType | null> = [null, null, null, null, null, null, null, null];
+// Registro de componentes por passo — Sessões 6/7 substituem os `null`
+// restantes pelos componentes reais (Passo 1b, Passo 2). Passos 3-7 ficam
+// como placeholder até as Sessões 8+ (fora do escopo desta rodada, ver
+// specs/010-onboarding-wizard.md). Cada passo real controla sua própria
+// validação/submit — só ele sabe quando está pronto para avançar (ver
+// WizardStepProps em lib/wizard/types.ts).
+const STEP_COMPONENTS: Array<ComponentType<WizardStepProps> | null> = [
+  Step1, null, null, null, null, null, null, null,
+];
 
 interface Props {
   initialStep: number;
@@ -20,9 +24,7 @@ interface Props {
 }
 
 export default function Wizard({ initialStep, initialRestaurantId }: Props) {
-  const { step, restaurantId, hydrate, setStep } = useWizardStore();
-  const [advancing, setAdvancing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { step, restaurantId, hydrate, setStep, setRestaurantId } = useWizardStore();
 
   useEffect(() => {
     hydrate({ step: initialStep, restaurantId: initialRestaurantId });
@@ -35,21 +37,9 @@ export default function Wizard({ initialStep, initialRestaurantId }: Props) {
     setStep(step - 1);
   }
 
-  async function handleContinue() {
-    // Sem restaurantId ainda: o Passo 1 (Sessão 5) é quem cria o
-    // restaurante ao salvar — até lá não há o que persistir aqui.
-    if (!restaurantId) return;
-    setError(null);
-    setAdvancing(true);
-    try {
-      const next = Math.min(step + 1, LAST_WIZARD_STEP);
-      await advanceWizardStep({ restaurantId, step: next });
-      setStep(next);
-    } catch {
-      setError('Não foi possível salvar. Tente novamente.');
-    } finally {
-      setAdvancing(false);
-    }
+  function handleSaved(newRestaurantId: string, nextStep: number) {
+    setRestaurantId(newRestaurantId);
+    setStep(nextStep);
   }
 
   const StepComponent = STEP_COMPONENTS[step];
@@ -60,23 +50,23 @@ export default function Wizard({ initialStep, initialRestaurantId }: Props) {
 
       <main className="flex flex-1 justify-center px-4 py-6 sm:py-10">
         <div className="w-full max-w-lg">
-          {StepComponent ? <StepComponent /> : <WizardStepPlaceholder step={step} />}
+          {StepComponent ? (
+            <StepComponent restaurantId={restaurantId} onSaved={handleSaved} />
+          ) : (
+            <WizardStepPlaceholder step={step} />
+          )}
         </div>
       </main>
 
-      <footer className="sticky bottom-0 border-t border-border bg-surface px-4 py-3">
-        <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-3">
-          <Button variant="secondary" onClick={handleBack} disabled={step === 0 || advancing}>
-            Voltar
-          </Button>
-          <div className="flex items-center gap-3">
-            {error && <span className="text-xs text-error">{error}</span>}
-            <Button variant="primary" onClick={handleContinue} disabled={!restaurantId || advancing}>
-              {advancing ? 'Salvando…' : 'Continuar'}
+      {step > 0 && (
+        <footer className="sticky bottom-0 border-t border-border bg-surface px-4 py-3">
+          <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-3">
+            <Button variant="secondary" onClick={handleBack}>
+              Voltar
             </Button>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }

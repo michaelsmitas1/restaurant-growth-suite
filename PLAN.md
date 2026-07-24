@@ -646,6 +646,81 @@ Gap real, só em 2 tabelas:
   — confirma que preset resolution, contagem de selos e o badge VIP
   condicional funcionam. `preview_logs` sem erros de servidor.
 
+### Progresso — Sessão 5: Passo 1 — dados do restaurante + slug + preview ✅ 2026-07-24
+
+**Refatoração necessária no shell (Sessão 3):** o `<Wizard>` genérico
+tinha um botão "Continuar" único que só avançava o passo — não dava
+para validar/salvar os dados de um passo real ali. Mudei para cada
+passo controlar seu próprio submit (`WizardStepProps.onSaved`, em
+`lib/wizard/types.ts`) — o shell só sabe navegar (Voltar) e trocar de
+passo quando o passo avisa que salvou. `Wizard.tsx` e `store.ts`
+ajustados (`setRestaurantId` novo).
+
+**Infra nova (migration `20260724030000_wizard_step1_infra.sql`):**
+- Bucket de Storage `restaurant-logos` (público, 2MB, jpg/png) —
+  path `{owner_id}/logo-{timestamp}.ext`, escopado por **owner_id**
+  (não restaurant_id) de propósito: o dono pode enviar a logo antes do
+  restaurante existir (a linha só nasce quando o Passo 1 é salvo).
+- `is_slug_available(check_slug, exclude_id)`: função `SECURITY
+  DEFINER` — a policy de `restaurants` (0a) restringe SELECT ao
+  próprio dono, então uma query direta reportaria "disponível" para
+  slugs de OUTROS donos (falso positivo); a função expõe só um
+  boolean, sem abrir uma policy de leitura ampla nem usar o service
+  client (CLAUDE.md restringe a 3 lugares, este não seria um deles).
+- **2 problemas achados pelo `get_advisors(security)` e corrigidos
+  antes de seguir** (não estavam óbvios até rodar o advisor): (1) a
+  policy de SELECT pública em `storage.objects` era desnecessária e
+  permitia *listar* todos os arquivos do bucket (bucket público já
+  serve por URL sem RLS) — removida; (2) `revoke ... from public` não
+  bastou para tirar o acesso de `anon`/`authenticated` — o Supabase
+  concede `EXECUTE` por default privileges na criação da função,
+  precisou revogar de cada role explicitamente antes de conceder só a
+  `authenticated`. Migration corrigida no arquivo E reaplicada no
+  banco de teste antes de prosseguir.
+- WARN aceito conscientemente (não é bug): `authenticated` pode
+  executar uma função `SECURITY DEFINER` — intencional, é exatamente
+  quem precisa chamá-la (o dono autenticado no wizard).
+
+**Código:**
+- `lib/slug.ts`: `slugify`/`isValidSlug`, funções puras testadas (9
+  casos — acentos, pontuação, espaços/underscores repetidos, corte em
+  60 chars).
+- `lib/wizard/step1.ts`: Server Action `saveStep1` — zod valida,
+  reconfere a disponibilidade do slug no banco (fonte de verdade, o
+  debounce do cliente é só UX), cria OU atualiza `restaurants`
+  (`.eq('owner_id', user.id)` + RLS como segunda camada), avança
+  `wizard_step` para 1.
+- `app/api/check-slug/route.ts`: `GET ?slug=&excludeId=` (conforme
+  "Regras de implementação" da spec), usa a RPC acima.
+- `components/wizard/Step1.tsx`: formulário completo — nome,
+  categoria, endereço, cor (color picker), upload de logo (client-side
+  direto pro Storage via `lib/supabase/client.ts`, valida tipo/tamanho
+  antes de enviar), slug sugerido do nome (debounce 500ms, editável) +
+  checagem de disponibilidade ao vivo (debounce 500ms), preview ao
+  vivo com `<CardPreview>` (Sessão 4). Retomada: se `restaurantId` já
+  existe, carrega os dados salvos ao montar.
+
+**Evidência:**
+- `npx tsc --noEmit` → 0 erros. `npx vitest run` →
+  `Test Files 7 passed (7)`, `Tests 53 passed (53)` (44 anteriores + 9
+  novos de `lib/slug.test.ts`).
+- RPC testada ao vivo via `execute_sql`: slug já usado pelo seed
+  (`sorveteria-da-vo-maria`) → `available = false`; slug livre →
+  `true`; mesmo slug usado, mas excluindo o próprio id → `true`
+  (confirma que editar o Passo 1 sem trocar de slug não se autobloqueia).
+- `get_advisors(security)` pós-correção: só os 3 INFO de deny-all já
+  documentados + o WARN aceito de `authenticated` na função + o WARN
+  pré-existente de leaked password protection. Nenhum problema não
+  documentado.
+- Verificado ao vivo via preview local: `/onboarding` sem sessão →
+  redireciona para `/login` (200) sem erro de compilação — confirma
+  que `Step1.tsx` e suas dependências (Server Action, rota de API,
+  upload client-side) compilam limpo no bundler do Next, não só no
+  `tsc`. `/dev/ui` seguiu 200 sem regressão. Preencher o formulário do
+  Passo 1 de ponta a ponta (upload de logo real, submit) não foi
+  verificado ao vivo pelo mesmo motivo já registrado na Sessão 1
+  (login bloqueado para automação).
+
 ---
 
 ### spec-023 — Cadastro do cliente (OTP-first) **[NOVA]**

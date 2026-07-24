@@ -306,7 +306,10 @@ Sessão 2 — formato já é exatamente o do CLAUDE.md.
       `/onboarding` retoma de onde o dono parou. Gate "dashboard só
       após wizard_completed_at" fica para quando os 8 passos existirem
       (fora do escopo desta rodada).
-- [ ] Passo 1: dados salvos, slug único, preview ao vivo
+- [x] Passo 1: dados salvos, slug único, preview ao vivo — Sessão 5
+      (2026-07-24, ver PLAN.md). `saveStep1` cria/atualiza `restaurants`,
+      `is_slug_available` (RPC) garante unicidade real no banco,
+      `<CardPreview>` atualiza ao vivo com nome/cor/logo.
 - [x] `<CardPreview>` construído e compartilhável — Sessão 4
       (2026-07-24, ver PLAN.md): `components/CardPreview.tsx`, fora de
       `components/wizard/` de propósito para ser consumido pela Web

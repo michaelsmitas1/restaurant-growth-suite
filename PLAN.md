@@ -560,6 +560,57 @@ Gap real, só em 2 tabelas:
   — mudança é só de schema, nenhum código de aplicação ainda lê as
   colunas novas).
 
+### Progresso — Sessão 3: estrutura do wizard (componente base, navegação, persistência) ✅ 2026-07-24
+
+**O que foi feito:**
+- Dependências novas: `zustand` (estado do wizard, conforme CLAUDE.md) e
+  `zod` (validação de entrada externa nas Server Actions — CLAUDE.md
+  exige em "toda entrada externa"; ainda não havia nenhum uso no
+  dashboard, primeira vez que entra).
+- `lib/wizard/steps.ts`: fonte única dos 8 passos (id 0-7 + título),
+  `clampWizardStep`/`isValidWizardStep` — funções puras, testadas.
+- `lib/wizard/store.ts`: Zustand store só com `step` + `restaurantId`
+  (navegação). Dados de cada passo (nome, cor, design do card etc.)
+  ficam no estado do próprio componente de passo, não aqui — decisão
+  registrada no comentário do arquivo, relevante para a Sessão 4
+  (`<CardPreview>`) e 5-7.
+- `lib/wizard/actions.ts`: Server Action `advanceWizardStep` — zod
+  valida `{restaurantId, step}`, `requireOwner` valida posse (mesmo
+  helper usado em todo o dashboard), grava `restaurants.wizard_step`.
+  Centraliza a checagem de posse para as Sessões 5-7 não repetirem.
+- `components/wizard/Wizard.tsx` (client): shell com progresso
+  (`WizardProgress`), navegação Voltar/Continuar, e um registro de
+  componentes por passo (`STEP_COMPONENTS`) — hoje todos `null`
+  (renderiza `WizardStepPlaceholder`); Sessões 5/6/7 substituem os 3
+  primeiros. "Continuar" fica desabilitado sem `restaurantId` — é o
+  Passo 1 (Sessão 5) quem cria o restaurante ao salvar, não existe o
+  que persistir antes disso.
+- `app/onboarding/page.tsx`: Server Component — busca o restaurante do
+  owner autenticado com `wizard_completed_at is null` (retomar de onde
+  parou); se não houver nenhum, `initialRestaurantId = null` (fluxo
+  novo, aguardando o Passo 1). Rota já protegida pelo middleware
+  existente (não está em `PUBLIC_PATHS`); `getUser()`+redirect mantido
+  na própria página também, na mesma linha do checklist de segurança do
+  CLAUDE.md.
+- Gate de acesso ao dashboard só após `wizard_completed_at`
+  (critério de aceite da spec) **não foi ligado ainda** — decisão
+  deliberada: os Passos 3-7 não existem até a Sessão 12/13, ligar o gate
+  agora deixaria qualquer dono preso no wizard sem conseguir sair. Fica
+  para quando o wizard estiver completo (fora do escopo desta rodada,
+  Sessões 8+).
+
+**Evidência:**
+- `npx tsc --noEmit` → 0 erros. `npx vitest run` →
+  `Test Files 5 passed (5)`, `Tests 38 passed (38)` (31 anteriores + 7
+  novos de `lib/wizard/steps.test.ts`).
+- Verificado ao vivo via preview local: `GET /onboarding` sem sessão →
+  redireciona para `/login` (200, tela renderiza), sem erro de
+  compilação no servidor Next (`preview_logs` sem erros) — confirma que
+  a rota nova compila e o middleware cobre corretamente o caminho
+  novo. Conteúdo pós-login do wizard não verificado ao vivo pelo mesmo
+  motivo já registrado na Sessão 1 (preencher senha do dono é ação de
+  credencial bloqueada para automação).
+
 ---
 
 ### spec-023 — Cadastro do cliente (OTP-first) **[NOVA]**

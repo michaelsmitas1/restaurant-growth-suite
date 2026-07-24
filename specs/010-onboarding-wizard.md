@@ -299,6 +299,13 @@ Sessão 2 — formato já é exatamente o do CLAUDE.md.
       (2026-07-24, ver PLAN.md) — reescrita contra o schema real
       (`customer_programs`/`visits`/`redemptions`/`loyalty_config`),
       sem nenhuma query a `reviews`/`campaigns`.
+- [x] Estrutura base do wizard (componente, navegação, persistência de
+      `wizard_step`) — Sessão 3 (2026-07-24, ver PLAN.md). Passos 0-7
+      registrados (`lib/wizard/steps.ts`), Zustand para navegação,
+      `advanceWizardStep` (Server Action, zod + `requireOwner`),
+      `/onboarding` retoma de onde o dono parou. Gate "dashboard só
+      após wizard_completed_at" fica para quando os 8 passos existirem
+      (fora do escopo desta rodada).
 - [ ] Passo 1: dados salvos, slug único, preview ao vivo
 - [ ] Passo 1b: design do card salvo em `card_design_config`, preview
       nos 2 estados, `<CardPreview>` compartilhado com Web Wallet

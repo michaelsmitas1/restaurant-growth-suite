@@ -1,5 +1,7 @@
 # spec-010 — Wizard de Onboarding
-# Status: [ ] Não iniciado
+# Status: [~] Em andamento — Sessões 1-7/13 concluídas (2026-07-24, ver PLAN.md)
+#         Passos 1, 1b e 2 (de 8) funcionais. Passos 3-7 + testes e2e
+#         seguem nas Sessões 8-13 (fora do escopo desta rodada).
 # Criado em: 2026-07-23 (o arquivo nunca existia — só o resumo em PLAN.md)
 # Prioridade: PRIMEIRA da Fase 2 — desbloqueia todas as outras specs
 # Depende de: Fase 0 completa (✅), limpeza das páginas legadas quebradas
@@ -321,37 +323,53 @@ Sessão 2 — formato já é exatamente o do CLAUDE.md.
       (2026-07-24, ver PLAN.md). `saveStep1b` faz upsert, upload de
       ícone customizado (bucket `stamp-icons`) e sugestão de cor a
       partir da logo (canvas, `lib/wizard/color.ts` testado).
-- [ ] Passo 2: Google Business via Places API, link de review salvo
+- [x] Passo 2: Google Business via Places API, link de review salvo —
+      Sessão 7 (2026-07-24, ver PLAN.md). `POST /api/verify-google-business`
+      + `saveStep2` (todos os campos opcionais, conforme a spec).
+      Verificação real contra a API do Google não testada —
+      `GOOGLE_PLACES_API_KEY` não configurada neste ambiente.
 - [ ] Passo 3: campos salvos em `form_fields_config`, nota sobre aceite
       visível
 - [ ] Passo 4: programa salvo em `loyalty_config` + `loyalty_milestones`
 - [ ] Passo 5: modos de validação salvos, recomendação por categoria
 - [ ] Passo 6: toggles e tom salvos, preview real via Claude API
 - [ ] Passo 7: QRs gerados corretamente, PDF funcional
-- [ ] Estado persistido: sair e voltar mantém progresso
-- [ ] Dashboard só acessível após `wizard_completed_at`
+- [~] Estado persistido: sair e voltar mantém progresso — funciona para
+      os Passos 1/1b/2 (únicos implementados até a Sessão 7); cada um
+      recarrega seus próprios dados salvos ao montar. Só fecha de fato
+      quando os Passos 3-7 existirem (Sessões 8+).
+- [ ] Dashboard só acessível após `wizard_completed_at` — decisão
+      deliberada da Sessão 3: não ligar esse gate antes do wizard estar
+      completo, ver PLAN.md.
 - [x] Todas as migrations idempotentes, RLS confirmado — Sessão 2
       (2026-07-24): `20260724010000_wizard_schema_gap.sql` aplicada e
       re-testada idempotente via `execute_sql`; `get_advisors(security)`
       sem problema novo. Migrations futuras das Sessões 8+ (fora do
       escopo desta rodada) seguem o mesmo padrão.
-- [ ] Mobile-first: wizard funciona no celular do dono
-- [ ] `tsc --noEmit` passa
-- [ ] Teste end-to-end: wizard completo em menos de 10 minutos
-- [ ] QR do Passo 7 abre `remy.app.br/[slug]/entrar` corretamente
+- [~] Mobile-first: wizard funciona no celular do dono — layout dos
+      Passos 1/1b/2 usa os padrões mobile-first do design system
+      (`max-w-lg`, touch targets ≥44px via `<Button>`/`<Input>`), não
+      testado em viewport real (ver limitação de login nas evidências
+      de cada sessão em PLAN.md).
+- [x] `tsc --noEmit` passa — confirmado a cada sessão (1-7), 0 erros.
+- [ ] Teste end-to-end: wizard completo em menos de 10 minutos — só
+      possível com os 8 passos prontos (Sessões 8-13).
+- [ ] QR do Passo 7 abre `remy.app.br/[slug]/entrar` corretamente —
+      Passo 7 (QRs) é Sessão 12, fora do escopo desta rodada.
 
 ---
 
 ## Sessões de implementação sugeridas
 
 ```
-Sessão 1:  Remover/redirecionar páginas legadas quebradas
-Sessão 2:  Confirmar schema existente vs. necessário (migrations só do gap)
-Sessão 3:  Estrutura do wizard (componente base, navegação, persistência)
-Sessão 4:  Componente <CardPreview> (reutilizável)
-Sessão 5:  Passo 1 — dados do restaurante + slug + preview
-Sessão 6:  Passo 1b — design do card + upload + extração de cor
-Sessão 7:  Passo 2 — Google Business + redes sociais
+Sessão 1:  ✅ Remover/redirecionar páginas legadas quebradas (2026-07-24)
+Sessão 2:  ✅ Confirmar schema existente vs. necessário (migrations só do gap) (2026-07-24)
+Sessão 3:  ✅ Estrutura do wizard (componente base, navegação, persistência) (2026-07-24)
+Sessão 4:  ✅ Componente <CardPreview> (reutilizável) (2026-07-24)
+Sessão 5:  ✅ Passo 1 — dados do restaurante + slug + preview (2026-07-24)
+Sessão 6:  ✅ Passo 1b — design do card + upload + extração de cor (2026-07-24)
+Sessão 7:  ✅ Passo 2 — Google Business + redes sociais (2026-07-24)
+—— rodada de 2026-07-24 parou aqui, conforme escopo pedido ——
 Sessão 8:  Passo 3 — campos do formulário
 Sessão 9:  Passo 4 — programa (acúmulo + milestones + bônus)
 Sessão 10: Passo 5 — modos de validação

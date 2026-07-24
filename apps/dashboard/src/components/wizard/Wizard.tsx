@@ -8,15 +8,15 @@ import WizardProgress from './WizardProgress';
 import WizardStepPlaceholder from './WizardStepPlaceholder';
 import Step1 from './Step1';
 import Step1b from './Step1b';
+import Step2 from './Step2';
 
-// Registro de componentes por passo — Sessão 7 substitui o próximo `null`
-// pelo componente real (Passo 2). Passos 3-7 ficam como placeholder até as
-// Sessões 8+ (fora do escopo desta rodada, ver
+// Registro de componentes por passo — Passos 3-7 ficam como placeholder
+// até as Sessões 8+ (fora do escopo desta rodada, ver
 // specs/010-onboarding-wizard.md). Cada passo real controla sua própria
 // validação/submit — só ele sabe quando está pronto para avançar (ver
 // WizardStepProps em lib/wizard/types.ts).
 const STEP_COMPONENTS: Array<ComponentType<WizardStepProps> | null> = [
-  Step1, Step1b, null, null, null, null, null, null,
+  Step1, Step1b, Step2, null, null, null, null, null,
 ];
 
 interface Props {

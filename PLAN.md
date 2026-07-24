@@ -442,7 +442,7 @@ do dashboard novo.
 
 ---
 
-### spec-010 — Wizard de onboarding (8 passos)
+### spec-010 — Wizard de onboarding (8 passos) 🟡 EM ANDAMENTO — Sessões 1-7/13 ✅ 2026-07-24
 
 ⚠️ **Arquivo criado em 2026-07-23** — `specs/010-onboarding-wizard.md`
 não existia até agora (só o resumo inline abaixo). Commitar antes de
@@ -766,6 +766,54 @@ ajustados (`setRestaurantId` novo).
   Next. Preenchimento completo do Passo 1b (upload de ícone real,
   extração de cor de uma logo real, submit) não verificado ao vivo pelo
   mesmo motivo da Sessão 1 (login bloqueado para automação).
+
+### Progresso — Sessão 7: Passo 2 — Google Business + redes sociais ✅ 2026-07-24
+
+**Última sessão do escopo pedido nesta rodada (1-7) — Sessões 8+ (Passo 3
+em diante) não iniciadas, conforme instrução.**
+
+**Código:**
+- `lib/googlePlaces.ts`: `parseGoogleBusinessLink` — interpreta o link
+  colado pelo dono (extrai `place_id` direto quando presente em
+  `place_id`/`query_place_id`/`placeid`, ou o nome do restaurante do
+  path `/place/.../` como query de busca; texto sem ser URL vira busca
+  livre). `buildGoogleReviewLink` monta o link de review a partir do
+  `place_id`. 7 casos testados. Links encurtados
+  (`maps.app.goo.gl`/`g.co`) não são resolvidos — precisariam seguir
+  redirect, documentado como limitação conhecida no comentário do
+  arquivo, não escondida.
+- `app/api/verify-google-business/route.ts`: `POST` server-side (usa
+  `GOOGLE_PLACES_API_KEY`, nunca exposta ao cliente) — Find Place (se
+  não veio `place_id` direto) + Place Details, retorna nome/endereço/
+  foto/link de review. Sem a env var configurada, responde 500 com
+  mensagem clara em vez de derrubar a rota — **não testado com chamada
+  real à API do Google** nesta sessão: `GOOGLE_PLACES_API_KEY` não está
+  configurada neste ambiente de desenvolvimento (nem no `.env.local`
+  usado para os previews desta rodada), documentado como pendência
+  igual ao já registrado em 0c para o envio real de WhatsApp.
+  `GOOGLE_PLACES_API_KEY` documentada em `.env.example`.
+- `lib/wizard/step2.ts`: Server Action `saveStep2` — todo campo é
+  opcional (spec: "pode pular... sem preencher redes sociais"), zod
+  normaliza string vazia para `null`, `requireOwner` valida posse,
+  avança `wizard_step` para 3.
+- `components/wizard/Step2.tsx`: campo de link + botão "Verificar" →
+  chama a rota acima, mostra card de confirmação (nome/endereço/foto)
+  quando verificado; link de review pré-preenchido e editável;
+  Instagram/Facebook/TikTok/Site (todos opcionais); "Continuar" nunca
+  fica bloqueado (nenhum campo é obrigatório neste passo).
+
+**Evidência:**
+- `npx tsc --noEmit` → 0 erros. `npx vitest run` →
+  `Test Files 9 passed (9)`, `Tests 65 passed (65)` (58 anteriores + 7
+  novos de `lib/googlePlaces.test.ts`).
+- Verificado ao vivo via preview local: `/onboarding`, `/dev/ui` e
+  `/api/check-slug` (sem sessão) seguem redirecionando/respondendo
+  corretamente, sem erro de compilação — confirma que `Step2.tsx`, a
+  Server Action e a nova rota de API compilam limpo no bundler do
+  Next. Fluxo completo do Passo 2 (verificação real contra a API do
+  Google, submit) não verificado ao vivo — soma das duas limitações já
+  registradas nesta rodada: login bloqueado para automação (Sessão 1)
+  e `GOOGLE_PLACES_API_KEY` não configurada neste ambiente.
 
 ---
 

@@ -512,6 +512,54 @@ hfqclbihfasnigitxpqj antes de qualquer edição, sem duplicar 0a).
   revisão de código linha a linha contra as colunas confirmadas via
   `list_tables` (schema real, não o rascunho do CLAUDE.md).
 
+### Progresso — Sessão 2: schema gap (só o que faltava) ✅ 2026-07-24
+
+**Contexto:** `list_tables` (projeto de teste hfqclbihfasnigitxpqj) já
+tinha sido consultado na Sessão 1. Comparado campo a campo contra
+"Schema necessário" de `specs/010-onboarding-wizard.md`:
+`loyalty_config`, `loyalty_milestones` e `form_fields_config` **já
+cobrem tudo** que os Passos 3/4/5/6 precisam (nomes diferentes do
+rascunho da spec — ex. `accrual_mode` em vez de `accumulation_type`,
+`slow_days` em vez de `double_points_days` — mesmo formato) — **zero
+migration para essas 3 tabelas**, para não duplicar o que a Fase 0 (0a)
+já criou.
+
+Gap real, só em 2 tabelas:
+- `restaurants`: faltava um campo de endereço completo (Passo 1 pede
+  "Endereço completo, obrigatório" — hoje só existe `city`/`neighborhood`,
+  insuficiente) e 2 redes sociais (`instagram_handle`/`facebook_url` já
+  cobrem Instagram/Facebook, reaproveitados sem rename).
+- `card_design_config`: faltava distinguir ícone preset (por categoria)
+  de upload customizado — só existia uma única `icon_url` — e o texto
+  do contador (Passo 1b).
+
+**Migration:** `supabase/migrations/20260724010000_wizard_schema_gap.sql`
+(idempotente, padrão `information_schema`/`pg_constraint` já usado em
+2.0b) —
+- `restaurants`: `+ address`, `+ social_tiktok`, `+ social_website`.
+- `card_design_config`: `icon_url` renomeada para `stamp_icon_custom_url`
+  (não usada em nenhum código, grep confirmou); `+ stamp_icon_type`
+  (`preset`|`custom`, check constraint), `+ stamp_icon_preset`
+  (default `'plate'`), `+ stamp_label` (default `'visitas até o
+  prêmio'`).
+- Nenhuma mudança de RLS necessária — as 2 tabelas já nascem com RLS +
+  policy "owner full access" (0a), colunas novas herdam a mesma policy.
+
+**Evidência:**
+- Aplicada ao vivo via `apply_migration` no projeto de teste
+  (hfqclbihfasnigitxpqj) — `{"success":true}`.
+- `list_tables` pós-migration confirma as 6 colunas novas com os tipos/
+  defaults/comments esperados.
+- Idempotência testada: re-executado o mesmo SQL via `execute_sql` —
+  sem erro (`"idempotent rerun ok"`).
+- `get_advisors(security)` — mesmos 3 INFO de deny-all já documentados
+  em 0a/0c (customers/otp_codes/customer_sessions) + 1 WARN pré-existente
+  de "leaked password protection" (não relacionado a esta migration,
+  não introduzido por ela). Nenhum problema novo.
+- `npx tsc --noEmit` → 0 erros. `npx vitest run` → 31/31 (sem regressão
+  — mudança é só de schema, nenhum código de aplicação ainda lê as
+  colunas novas).
+
 ---
 
 ### spec-023 — Cadastro do cliente (OTP-first) **[NOVA]**

@@ -307,8 +307,14 @@ Sessão 2 — formato já é exatamente o do CLAUDE.md.
       após wizard_completed_at" fica para quando os 8 passos existirem
       (fora do escopo desta rodada).
 - [ ] Passo 1: dados salvos, slug único, preview ao vivo
+- [x] `<CardPreview>` construído e compartilhável — Sessão 4
+      (2026-07-24, ver PLAN.md): `components/CardPreview.tsx`, fora de
+      `components/wizard/` de propósito para ser consumido pela Web
+      Wallet real (spec-019) sem alteração de props. Presets de ícone
+      por categoria em `lib/wizard/stampIconPresets.ts` (testado).
+      Falta: `card_design_config` salvo pelo Passo 1b em si (Sessão 6).
 - [ ] Passo 1b: design do card salvo em `card_design_config`, preview
-      nos 2 estados, `<CardPreview>` compartilhado com Web Wallet
+      nos 2 estados usando o `<CardPreview>` da Sessão 4
 - [ ] Passo 2: Google Business via Places API, link de review salvo
 - [ ] Passo 3: campos salvos em `form_fields_config`, nota sobre aceite
       visível

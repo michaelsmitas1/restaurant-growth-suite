@@ -611,6 +611,41 @@ Gap real, só em 2 tabelas:
   motivo já registrado na Sessão 1 (preencher senha do dono é ação de
   credencial bloqueada para automação).
 
+### Progresso — Sessão 4: `<CardPreview>` reutilizável ✅ 2026-07-24
+
+**O que foi feito:**
+- `lib/wizard/stampIconPresets.ts`: presets de ícone de selo por
+  categoria (Passo 1b) — `restaurante`/`bar`/`cafeteria`/`lanchonete`,
+  ícones do `lucide-react` já instalado (conferidos um a um em
+  `dynamicIconImports.js` antes de importar — lib não tem ícone de
+  hambúrguer/taco nativo, `Beef`/`Drumstick` usados como aproximação,
+  documentado no comentário do arquivo). `findStampIconPreset`/
+  `presetsForSegment` são funções puras, testadas (7 casos).
+- `components/CardPreview.tsx`: componente compartilhado (fora de
+  `components/wizard/`, de propósito — vai ser consumido pela Web
+  Wallet real, spec-019, não só pelo wizard). Props não dependem de
+  nada específico do wizard: `totalStamps`/`currentStamps` são
+  genéricos (marco ilustrativo no wizard, milestone real na wallet),
+  `stampIcon` aceita preset OU URL customizada, `isVip` já no shape
+  para quando a wallet precisar do badge. Rodapé "Feito com Remy"
+  fixo, não é prop — CLAUDE.md: não é configurável pelo dono.
+- Adicionado a `/dev/ui` (rota pública, dev-only) com toggle
+  vazio/exemplo (3/5) + uma segunda instância mostrando o estado VIP —
+  única forma de verificar visualmente sem depender de login (ver
+  limitação registrada na Sessão 1).
+
+**Evidência:**
+- `npx tsc --noEmit` → 0 erros. `npx vitest run` →
+  `Test Files 6 passed (6)`, `Tests 44 passed (44)` (38 anteriores + 6
+  novos de `stampIconPresets.test.ts`).
+- Verificado ao vivo via preview local em `/dev/ui`: `get_page_text`
+  confirma as duas instâncias renderizando corretamente — card 1
+  "Clube do Farrapos" em `0/5 visitas até o prêmio` (estado vazio,
+  preset `plate`) e card 2 "Clube VIP" com badge `VIP` visível em
+  `5/5 visitas até o prêmio` (preset `mug`, `textColor` customizado)
+  — confirma que preset resolution, contagem de selos e o badge VIP
+  condicional funcionam. `preview_logs` sem erros de servidor.
+
 ---
 
 ### spec-023 — Cadastro do cliente (OTP-first) **[NOVA]**

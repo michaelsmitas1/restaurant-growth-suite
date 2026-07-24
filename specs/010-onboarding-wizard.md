@@ -316,8 +316,11 @@ Sessão 2 — formato já é exatamente o do CLAUDE.md.
       Wallet real (spec-019) sem alteração de props. Presets de ícone
       por categoria em `lib/wizard/stampIconPresets.ts` (testado).
       Falta: `card_design_config` salvo pelo Passo 1b em si (Sessão 6).
-- [ ] Passo 1b: design do card salvo em `card_design_config`, preview
-      nos 2 estados usando o `<CardPreview>` da Sessão 4
+- [x] Passo 1b: design do card salvo em `card_design_config`, preview
+      nos 2 estados usando o `<CardPreview>` da Sessão 4 — Sessão 6
+      (2026-07-24, ver PLAN.md). `saveStep1b` faz upsert, upload de
+      ícone customizado (bucket `stamp-icons`) e sugestão de cor a
+      partir da logo (canvas, `lib/wizard/color.ts` testado).
 - [ ] Passo 2: Google Business via Places API, link de review salvo
 - [ ] Passo 3: campos salvos em `form_fields_config`, nota sobre aceite
       visível

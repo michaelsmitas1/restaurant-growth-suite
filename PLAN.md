@@ -721,6 +721,52 @@ ajustados (`setRestaurantId` novo).
   verificado ao vivo pelo mesmo motivo já registrado na Sessão 1
   (login bloqueado para automação).
 
+### Progresso — Sessão 6: Passo 1b — design do card + upload + extração de cor ✅ 2026-07-24
+
+**Infra nova (migration `20260724040000_wizard_step1b_infra.sql`):**
+- Bucket de Storage `stamp-icons` (público, 200KB, só PNG). Diferente do
+  `restaurant-logos` (Sessão 5), aqui o path é escopado por
+  **restaurant_id** (não owner_id) — no Passo 1b o restaurante já existe
+  (o Passo 1 já criou), então dá pra verificar posse real via subquery em
+  `restaurants` (mesmo padrão de posse do resto do schema). Sem policy de
+  SELECT, mesmo raciocínio documentado na migration da Sessão 5 (bucket
+  público não precisa — só criaria uma forma de listar os arquivos).
+  `get_advisors(security)` pós-aplicação: nenhum problema novo.
+
+**Código:**
+- `lib/wizard/color.ts`: `averageColorFromPixels`/`rgbToHex` — a
+  matemática pura da "sugestão automática extraída da logo" (spec), 5
+  casos testados (média de pixels sólidos, ignora pixels 100%
+  transparentes, default quando tudo é transparente). A leitura de
+  pixels em si (canvas + `Image`, só existe no DOM) fica no componente,
+  não dá pra testar sem canvas real — mesma fronteira pura/IO já usada
+  em `lib/otp/rules.ts` vs `lib/otp/index.ts`.
+- `lib/wizard/step1b.ts`: Server Action `saveStep1b` — `requireOwner`
+  (restaurante já existe neste passo, diferente do Passo 1), zod valida
+  (inclui `refine`: preset OU URL customizada, nunca os dois vazios),
+  `upsert` em `card_design_config` (`onConflict: restaurant_id`),
+  avança `wizard_step` para 2.
+- `components/wizard/Step1b.tsx`: cor de fundo (color picker + botão
+  "Sugerir da logo", só aparece se houver logo do Passo 1), grade de
+  presets de ícone por categoria (`lib/wizard/stampIconPresets.ts`,
+  Sessão 4) + upload de PNG customizado, nome do programa (máx 30,
+  contador visível, sugestão "Programa {nome}" pré-carregada), texto do
+  contador, formato do código (QR/código de barras), aviso sobre
+  diferenças entre wallets (texto fixo da spec), preview ao vivo com
+  toggle vazio/exemplo via `<CardPreview>`. Retomada: carrega
+  `card_design_config` existente ao montar, se houver.
+
+**Evidência:**
+- `npx tsc --noEmit` → 0 erros. `npx vitest run` →
+  `Test Files 8 passed (8)`, `Tests 58 passed (58)` (53 anteriores + 5
+  novos de `lib/wizard/color.test.ts`).
+- Verificado ao vivo via preview local: `/onboarding` (sem sessão) e
+  `/dev/ui` seguem 200 sem erro de compilação — confirma que
+  `Step1b.tsx` e o novo Server Action compilam limpo no bundler do
+  Next. Preenchimento completo do Passo 1b (upload de ícone real,
+  extração de cor de uma logo real, submit) não verificado ao vivo pelo
+  mesmo motivo da Sessão 1 (login bloqueado para automação).
+
 ---
 
 ### spec-023 — Cadastro do cliente (OTP-first) **[NOVA]**

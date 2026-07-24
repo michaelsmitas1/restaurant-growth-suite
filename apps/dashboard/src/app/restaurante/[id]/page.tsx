@@ -24,11 +24,12 @@ export default async function RestauranteDashboard({ params }: Props) {
   ] = await Promise.all([
     supabase.from('loyalty_config').select('stamps_per_visit, validation_modes').eq('restaurant_id', params.id).maybeSingle(),
     supabase.from('loyalty_milestones').select('stamps_required').eq('restaurant_id', params.id).order('position').limit(1).maybeSingle(),
-    supabase.from('customer_programs')
-      .select('id, current_stamps, total_visits, last_visit_at, customer:customers(name, phone)')
-      .eq('restaurant_id', params.id)
-      .order('last_visit_at', { ascending: false, nullsFirst: false })
-      .limit(25),
+    // customers tem RLS deny-all por decisão deliberada (CLAUDE.md) — um
+    // embed comum (customer:customers(...)) nunca traria nome/telefone
+    // pro client do dono. RPC SECURITY DEFINER escopada ao próprio
+    // restaurante (mesmo padrão de is_slug_available, Sessão 5 da
+    // spec-010) resolve sem abrir policy nova em customers.
+    supabase.rpc('dashboard_customers_for_restaurant', { p_restaurant_id: params.id }),
     supabase.from('customer_programs').select('*', { count: 'exact', head: true }).eq('restaurant_id', params.id),
     supabase.from('visits').select('*', { count: 'exact', head: true }).eq('restaurant_id', params.id)
       .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
@@ -36,15 +37,7 @@ export default async function RestauranteDashboard({ params }: Props) {
   ]);
 
   const stampsRequired = firstMilestone?.stamps_required ?? loyaltyConfig?.stamps_per_visit ?? 1;
-
-  const customers = (customerPrograms || []).map((cp: any) => ({
-    id: cp.id,
-    name: cp.customer?.name ?? null,
-    phone: cp.customer?.phone ?? null,
-    current_stamps: cp.current_stamps,
-    total_visits: cp.total_visits,
-    last_visit_at: cp.last_visit_at,
-  }));
+  const customers = customerPrograms || [];
 
   return (
     <div className="app-layout">

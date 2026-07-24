@@ -815,6 +815,67 @@ em diante) não iniciadas, conforme instrução.**
   registradas nesta rodada: login bloqueado para automação (Sessão 1)
   e `GOOGLE_PLACES_API_KEY` não configurada neste ambiente.
 
+### Pós-Sessão 7 — 2 bugs reais encontrados testando localmente ✅ 2026-07-24
+
+**Contexto:** o usuário rodou o dashboard localmente (`npm run dev`) pela
+primeira vez desde o início desta rodada — a limitação de automação
+(login bloqueado para preencher senha, registrada em toda sessão acima)
+significava que **nenhum login real tinha sido testado ponta a ponta**
+neste projeto até agora, em nenhuma sessão anterior (0b só testou "sem
+sessão → redirect /login", nunca "com sessão → passa"). Dois bugs reais
+apareceram, nenhum dos dois introduzido pelas Sessões 1-7:
+
+**1. Login travava em "Entrando..." indefinidamente.**
+Diagnóstico ao vivo (Network tab do usuário + log de debug temporário no
+middleware): o `POST /auth/v1/token` retornava 200 (login funcionava no
+Supabase), mas a navegação seguinte sempre voltava 307 pro `/login` — o
+cookie de sessão (`sb-...-auth-token`) chegava certinho na request
+seguinte, mas `supabase.auth.getUser()` respondia `"Auth session
+missing!"` mesmo assim. Causa raiz: `package.json` tinha
+`"@supabase/ssr": "^0.1.0"` (versão travada em 0.1.x pelo `^`, muito
+antiga) rodando ao lado de `@supabase/supabase-js@2.108.1` (resolvido
+solto, bem mais novo) — o formato de cookie que a versão antiga do `ssr`
+escreve não é mais compatível com o que a versão nova do `supabase-js`
+espera ler. Corrigido: `@supabase/ssr` atualizado para `^0.12.3`
+(latest). Approveitando, `login/page.tsx` trocou `router.push('/') +
+router.refresh()` por `window.location.href = '/'` — navegação
+client-side corria risco de disparar antes do cookie estar
+100% gravado; navegação completa garante que ele vai junto (mesmo com
+a lib corrigida, é mais robusto contra a mesma classe de corrida).
+- Evidência: log de debug temporário no middleware mostrou
+  `hasUser: false, userError: 'Auth session missing!'` antes da correção
+  e `hasUser: true, userError: null` depois — mesmo cookie, mesma rota,
+  única mudança foi a versão da lib. `tsc --noEmit`: 0 erros. `vitest
+  run`: 65/65. Confirmado ao vivo pelo usuário: login completo, chegou
+  no dashboard.
+
+**2. Dashboard mostrava todo cliente como "Anônimo".**
+Achado ao testar o dashboard já logado (print do usuário): a query de
+`app/restaurante/[id]/page.tsx` (reescrita na Sessão 1) embutia
+`customer:customers(name, phone)` via PostgREST a partir de
+`customer_programs` — mas `customers` nasce **deny-all** por decisão
+deliberada (CLAUDE.md/0a/0c: "acesso só passa por
+`lib/customerSession.ts`"), então o client do dono nunca conseguia ler
+o embed. Não era um bug introduzido pela Sessão 1 em si — a query antiga
+(pré-Sessão 1) usava um schema totalmente diferente e quebrava antes de
+chegar nesse ponto, então isso nunca tinha sido exercitado.
+Corrigido com o mesmo padrão já usado em `is_slug_available` (Sessão 5):
+migration `20260724050000_dashboard_customers_rpc.sql` — função
+`dashboard_customers_for_restaurant(p_restaurant_id)` `SECURITY
+DEFINER`, verifica posse do restaurante internamente, devolve só
+id/nome/telefone/selos/visitas dos clientes DAQUELE restaurante. Não
+abre nenhuma policy nova em `customers` (a decisão de deny-all continua
+intacta) nem usa o service client (que é restrito aos 3 lugares do
+CLAUDE.md). `page.tsx` trocado para `supabase.rpc(...)` em vez do embed.
+- `get_advisors(security)`: mesmo padrão de WARN aceito conscientemente
+  já usado em `is_slug_available` (função SECURITY DEFINER executável
+  por `authenticated`, intencional). Nenhum problema novo.
+- `tsc --noEmit`: 0 erros. `vitest run`: 65/65 (nenhum teste novo — é
+  lógica de banco, mesmo padrão de `is_slug_available` que também não
+  tem teste unitário próprio, só verificação via `execute_sql` ao vivo).
+- Confirmado ao vivo pelo usuário: nomes reais aparecendo na lista de
+  clientes do dashboard (print pós-fix pendente de confirmação final).
+
 ---
 
 ### spec-023 — Cadastro do cliente (OTP-first) **[NOVA]**
